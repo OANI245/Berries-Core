@@ -109,9 +109,7 @@ public class TCMMainScreenPages {
                 }));
             }
         } else {
-            data1 = List.of(MetroTileGrid.INSTANCE.dataOfTeleport(TCMComponent.text("天城湖心"), TCMComponent.text("湖心位于湾流区，天城的出生点就位于此处，此地交通十分便利。"), new Vec3(-116.5, 66.5, -92.5) //坐标
-            ), MetroTileGrid.INSTANCE.dataOfTeleport(TCMComponent.text("延海商业区"), TCMComponent.text("2024年8月起，天城开始重点建设城市建设项目，于是延海商业区应运而生，至今占据了湾流城建的一大部分。"), new Vec3(382.5, 65.5, 855.5) //坐标
-            ), MetroTileGrid.INSTANCE.dataOfTeleport(TCMComponent.text("天城北站"), TCMComponent.text("天城北站是天城第一座火车站，至2025年6月1日为止，天城北站已连接城际线路1条和地铁线路2条。"), new Vec3(735.5, 66.5, -11238.5) //坐标
+            data1 = List.of(MetroTileGrid.INSTANCE.dataOfTeleport(TCMComponent.text("默认地点"), TCMComponent.text("位于TCMMainScreenPages.java的第111行。非调试情况下，你不应该看到它。"), new Vec3(0, 0, 0) //坐标
             ));
         }
 

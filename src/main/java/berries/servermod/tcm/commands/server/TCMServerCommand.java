@@ -20,7 +20,7 @@ public class TCMServerCommand {
     public static void register() {
         CommandRegistrationCallback.EVENT.register((d, b, a) -> {
             d.register(
-                    LiteralArgumentBuilder.<CommandSourceStack>literal("tcms")
+                    LiteralArgumentBuilder.<CommandSourceStack>literal("berriesserver")
                             .then(
                                     LiteralArgumentBuilder.<CommandSourceStack>literal("reload")
                                             .requires((s) -> Permissions.check(s, "tcm.commands.reload", s.hasPermission(3)))
@@ -33,14 +33,14 @@ public class TCMServerCommand {
                                                                 PacketSyncServerConfigServer.sendSyncServerTimeMessagesS2C(player, time);
                                                             }
                                                         });
-                                                        stack.getSource().sendSuccess(() -> TCMComponent.text("Tiancheng Mod Server Side Reload Successful."), true);
+                                                        stack.getSource().sendSuccess(() -> TCMComponent.text(UFEInfo.MOD_NAME + " Server Side Reload Successful."), true);
                                                         return 1;
                                                     }
                                             )
                             ).executes(
                                     (stack) -> {
                                         stack.getSource().getPlayerOrException().sendSystemMessage(
-                                                TCMComponent.text("Tiancheng Mod").copy()
+                                                TCMComponent.text(UFEInfo.MOD_NAME).copy()
                                                         .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN).withFont(new ResourceLocation(UFEInfo.MOD_ID, "vga")))
                                                         .append("\n")
                                                         .append(

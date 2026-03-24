@@ -40,7 +40,7 @@ public class TCMClientCommand {
         ClientCommandRegistrationCallback.EVENT.register(
                 (d, c) -> {
                     d.register(
-                            ClientCommandManager.literal("tcm").then(
+                            ClientCommandManager.literal("berries").then(
                                     ClientCommandManager.literal("checkupdate").executes(TCMClientCommand::checkUpdates)
                             ).then(ClientCommandManager.literal("testscreen").then(
                                     ClientCommandManager.argument("screen", IntegerArgumentType.integer()).executes((ctx) -> {

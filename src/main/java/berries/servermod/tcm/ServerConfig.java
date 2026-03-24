@@ -22,7 +22,7 @@ public class ServerConfig {
      * Config类可用实例
      */
     public static final ServerConfig INSTANCE;
-    private static final MutableComponent PREFIX = TCMComponent.text("天城提醒您：").copy()
+    private static final MutableComponent PREFIX = TCMComponent.text(UFEInfo.MOD_NAME + " 提醒您：").copy()
             .withStyle(
                     Style.EMPTY
                             .withColor(0xFFB6C1)
@@ -38,24 +38,10 @@ public class ServerConfig {
     public List<Tuple<Tuple<String, String>, Vec3>> teleports = List.of(
             new Tuple<>(
                     new Tuple<>(
-                            "天城湖心",
-                            "湖心位于湾流区，天城的出生点就位于此处，此地交通十分便利。"
+                            "默认地点",
+                            "这是一个代码中默认的传送地点，非调试情况下，你不应该看到它。"
                     ),
                     new Vec3(-116.5, 66.5, -92.5)
-            ),
-            new Tuple<>(
-                    new Tuple<>(
-                            "延海商业区",
-                            "2024年8月起，天城开始重点建设城市建设项目，于是延海商业区应运而生，至今占据了湾流城建的一大部分。"
-                    ),
-                    new Vec3(382.5, 65.5, 855.5)
-            ),
-            new Tuple<>(
-                    new Tuple<>(
-                            "天城北站",
-                            "天城北站是天城第一座火车站，至2025年6月1日为止，天城北站已连接城际线路1条和地铁线路2条。"
-                    ),
-                    new Vec3(735.5, 66.5, -11238.5)
             )
     );
 
@@ -82,29 +68,6 @@ public class ServerConfig {
                 ).copy().withStyle(
                         Style.EMPTY.withColor(ChatFormatting.YELLOW)
                 )
-        ).append(LINE_SEPARATOR).append(
-                TCMComponent.text("请注意，如果您的存档不是从bilibili-姚鲜森学长菌的获取渠道获得的，均为假冒伪劣产品。").copy()
-                        .withStyle(
-                                Style.EMPTY.withColor(0xFF69B4).withBold(true)
-                        )
-        ));
-        timeMessages.put(12500L, PREFIX.copy().append(
-                TCMComponent.text(
-                        "各位玩家"
-                ).copy().withStyle(
-                        Style.EMPTY.withColor(0xFFB6C1)
-                )
-        ).append("，").append(
-                TCMComponent.text(
-                        "晚上到了，快快欣赏下延海商业区的夜景吧！"
-                ).copy().withStyle(
-                        Style.EMPTY.withColor(0x009ACD)
-                )
-        ).append(LINE_SEPARATOR).append(
-                TCMComponent.text("请注意，如果您的存档不是从bilibili-姚鲜森学长菌的获取渠道获得的，均为假冒伪劣产品。").copy()
-                        .withStyle(
-                                Style.EMPTY.withColor(0x39C5BB).withBold(true)
-                        )
         ));
     }
 
@@ -112,7 +75,7 @@ public class ServerConfig {
      * 读取模组设置的方法，此方法会更新实例内的成员变量
      */
     public void readConfig() {
-        String filePath = String.format("%s%stiancheng_mod_server.json", FabricLoader.getInstance().getConfigDir(), File.separator);
+        String filePath = String.format("%s%sberries_core_server.json", FabricLoader.getInstance().getConfigDir(), File.separator);
         File configFile = new File(filePath);
         if (!configFile.exists()) {
             saveConfig();
@@ -222,7 +185,7 @@ public class ServerConfig {
      * 写入模组设置的方法，此方法不会更新实例内的成员变量
      */
     public void saveConfig() {
-        String filePath = String.format("%s%stiancheng_mod_server.json", FabricLoader.getInstance().getConfigDir(), File.separator);
+        String filePath = String.format("%s%sberries_core_server.json", FabricLoader.getInstance().getConfigDir(), File.separator);
         File configFile = new File(filePath);
         if (!configFile.exists()) {
             try {

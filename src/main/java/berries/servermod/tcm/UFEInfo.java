@@ -10,7 +10,7 @@ import java.util.function.Supplier;
 public interface UFEInfo {
     String MOD_ID = "tcm";
     //模组名称 Mod Name
-    String MOD_NAME = "Tiancheng Mod";
+    String MOD_NAME = "Berries Core";
     //模组版本 Mod Version
     String MOD_VERSION = ((Supplier<String>) () -> {
         try {

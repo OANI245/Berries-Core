@@ -1,6 +1,7 @@
 package berries.servermod.tcm.client.util;
 
 import berries.servermod.tcm.TCM;
+import berries.servermod.tcm.UFEInfo;
 import berries.servermod.tcm.client.Config;
 import berries.servermod.tcm.client.TCMClient;
 import berries.servermod.tcm.client.screen.TCMMessageAndOKScreen;
@@ -122,7 +123,7 @@ public class ModUpdate {
             HttpRequest req = HttpRequest.newBuilder()
                     .uri(new URI(url))
                     .GET()
-                    .header("User-Agent", "Tiancheng Mod Updater")
+                    .header("User-Agent", UFEInfo.MOD_NAME + " Updater")
                     .build();
 
             HttpResponse<InputStream> resp = client.send(req, HttpResponse.BodyHandlers.ofInputStream());
@@ -274,7 +275,7 @@ public class ModUpdate {
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(new URI(url))
                 .GET()
-                .header("User-Agent", "Tiancheng Mod Updater")
+                .header("User-Agent", UFEInfo.MOD_NAME + " Updater")
                 .build();
 
         HttpResponse<InputStream> resp = client.send(req, HttpResponse.BodyHandlers.ofInputStream());

@@ -17,7 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Tiancheng Mod的设置类
+ * Mod的设置类
  * <br/>设有读取数据 <code>readConfig()</code> 以及写入数据 <code>saveConfig()</code>
  * <br/>在模组第一次加载时，会自动读取数据。
  * @author OANI_245
@@ -81,29 +81,6 @@ public class Config {
                 ).copy().withStyle(
                         Style.EMPTY.withColor(ChatFormatting.YELLOW).withBold(false)
                 )
-        ).append(LINE_SEPARATOR).append(
-                TCMComponent.text("请注意，如果您的存档不是从bilibili-姚鲜森学长菌的获取渠道获得的，均为假冒伪劣产品。").copy()
-                        .withStyle(
-                                Style.EMPTY.withColor(0xFF69B4).withBold(true)
-                        )
-        ));
-        timeMessages.put(12500L, PREFIX.copy().append(
-                TCMComponent.text(
-                        "各位玩家"
-                ).copy().withStyle(
-                        Style.EMPTY.withColor(0xFFB6C1).withBold(false)
-                )
-        ).append("，").append(
-                TCMComponent.text(
-                        "晚上到了，快快欣赏下延海商业区的夜景吧！"
-                ).copy().withStyle(
-                        Style.EMPTY.withColor(0x009ACD).withBold(false)
-                )
-        ).append(LINE_SEPARATOR).append(
-                TCMComponent.text("请注意，如果您的存档不是从bilibili-姚鲜森学长菌的获取渠道获得的，均为假冒伪劣产品。")
-                        .copy().withStyle(
-                                Style.EMPTY.withColor(0x39C5BB).withBold(true)
-                        )
         ));
     }
 
@@ -111,7 +88,7 @@ public class Config {
      * 读取模组设置的方法，此方法会更新实例内的成员变量
      */
     public void readConfig() {
-        String filePath = String.format("%s%stiancheng_mod.json", FabricLoader.getInstance().getConfigDir(), File.separator);
+        String filePath = String.format("%s%sberries_core.json", FabricLoader.getInstance().getConfigDir(), File.separator);
         File configFile = new File(filePath);
         if (!configFile.exists()) {
             saveConfig();
@@ -220,7 +197,7 @@ public class Config {
      * 写入模组设置的方法，此方法不会更新实例内的成员变量
      */
     public void saveConfig() {
-        String filePath = String.format("%s%stiancheng_mod.json", FabricLoader.getInstance().getConfigDir(), File.separator);
+        String filePath = String.format("%s%sberries_core.json", FabricLoader.getInstance().getConfigDir(), File.separator);
         File configFile = new File(filePath);
         if (!configFile.exists()) {
             try {
