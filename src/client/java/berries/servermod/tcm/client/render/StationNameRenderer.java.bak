@@ -1,0 +1,156 @@
+package berries.servermod.tcm.client.render;
+
+import berries.servermod.tcm.block.blockentity.BlockEntityStationNameEntranceV2;
+import berries.servermod.tcm.block.MixinStates;
+import berries.servermod.tcm.client.data.TCMDynamicResourceCache;
+import com.mojang.blaze3d.vertex.PoseStack;
+import mtr.block.BlockStationNameBase;
+import org.mtr.mod.block.BlockStationNameEntrance;
+import mtr.block.IBlock;
+import mtr.client.ClientCache;
+import mtr.client.ClientData;
+import mtr.client.IDrawing;
+import mtr.data.IGui;
+import mtr.data.RailwayData;
+import mtr.data.Station;
+import mtr.mappings.BlockEntityRendererMapper;
+import mtr.mappings.Text;
+import mtr.mappings.UtilitiesClient;
+import mtr.render.*;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+public class StationNameRenderer<T extends BlockEntityStationNameEntranceV2> extends BlockEntityRendererMapper<T> implements IGui, IDrawing {
+    private final boolean showLogo;
+
+    public StationNameRenderer(BlockEntityRenderDispatcher dispatcher, boolean showLogo) {
+        super(dispatcher);
+        this.showLogo = showLogo;
+    }
+
+    public void render(T entity, float f, PoseStack poseStack, MultiBufferSource vertexConsumers, int light, int overlay) {
+        final BlockGetter world = entity.getLevel();
+        if (world == null) {
+            return;
+        }
+
+        final BlockPos pos = entity.getBlockPos();
+        final BlockState state = world.getBlockState(pos);
+        final Direction facing = IBlock.getStatePropertySafe(state, BlockStationNameBase.FACING);
+        final int color = RenderRouteBase.getShadingColor(facing, entity.getColor(state));
+
+        final StoredMatrixTransformations storedMatrixTransformations = new StoredMatrixTransformations();
+        storedMatrixTransformations.add(matricesNew -> {
+            matricesNew.translate(0.5 + entity.getBlockPos().getX(), 0.5 + entity.yOffset + entity.getBlockPos().getY(), 0.5 + entity.getBlockPos().getZ());
+            UtilitiesClient.rotateYDegrees(matricesNew, -facing.toYRot());
+            UtilitiesClient.rotateZDegrees(matricesNew, 180);
+        });
+
+        final Station station = RailwayData.getStation(ClientData.STATIONS, ClientData.DATA_CACHE, pos);
+        List<String> lineNames = new ArrayList<>();
+        List<Integer> lineColors = new ArrayList<>();
+        Map<Integer, ClientCache.ColorNameTuple> routes = null;
+        String selectedExit = "";
+        if (station != null) {
+            routes = ClientData.DATA_CACHE.getAllRoutesIncludingConnectingStations(station);
+            routes.forEach((color1, route) -> {
+                lineNames.add(route.name);
+                lineColors.add(route.color);
+            });
+
+            if (entity instanceof BlockEntityStationNameEntranceV2) {
+                final Map<String, List<String>> exits = station.getGeneratedExits();
+                try {
+                    long selectedId = entity.getSelectedExitZone();
+                    String str = Station.deserializeExit(selectedId);
+                    if (exits.containsKey(str)) {
+                        selectedExit = str;
+                    }
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+        }
+
+        String exitZoneName = selectedExit;
+        String left = exitZoneName.replaceAll("\\d+$", ""),
+                right = exitZoneName.replaceAll("^" + left, "");
+        String[] exitZoneCode = !exitZoneName.isEmpty() ? new String[] {left, right} : new String[] {null, null};
+
+        for (int i = 0; i < (entity.isDoubleSided ? 2 : 1); i++) {
+            final StoredMatrixTransformations storedMatrixTransformations2 = storedMatrixTransformations.copy();
+            final boolean shouldFlip = i == 1;
+            storedMatrixTransformations2.add(matricesNew -> {
+                if (shouldFlip) {
+                    UtilitiesClient.rotateYDegrees(matricesNew, 180);
+                }
+                matricesNew.translate(0, 0, 0.5 - entity.zOffset - SMALL_OFFSET);
+            });
+            drawStationName(world, pos, state, facing, storedMatrixTransformations2, vertexConsumers, station == null ? Text.translatable("gui.mtr.untitled").getString() : station.name, station == null ? 0 : station.color, routes != null ? lineNames : new ArrayList<>(), routes != null ? lineColors : new ArrayList<>(), routes != null ? routes.size() : 0, color, light, exitZoneCode);
+        }
+    }
+
+    protected void drawStationName(BlockGetter world, BlockPos pos, BlockState state, Direction facing, StoredMatrixTransformations storedMatrixTransformations, MultiBufferSource vertexConsumers, String stationName, int stationColor, List<String> lineNames, List<Integer> lineColors, int lineNamesLength, int color, int light, String[] exitCode) {
+        final int lengthLeft = getLength(world, pos, false);
+        final int lengthRight = getLength(world, pos, true);
+
+        final int totalLength = lengthLeft + lengthRight - 1;
+        if (showLogo) {
+            final int propagateProperty = IBlock.getStatePropertySafe(world, pos, BlockStationNameEntrance.STYLE);
+            final float logoSize = propagateProperty % 2 == 0 ? 0.5F : 1;
+            RenderTrains.scheduleRender(
+                    state.hasProperty(MixinStates.SHOW_LINES_AND_EXIT_ZONE) && state.getValue(MixinStates.SHOW_LINES_AND_EXIT_ZONE) && (propagateProperty == 0 || propagateProperty == 2 || propagateProperty == 4) ?
+                            TCMDynamicResourceCache.instance.getStationNameEntrance(
+                                    propagateProperty < 2 || propagateProperty >= 4 ? ARGB_WHITE : ARGB_BLACK,
+                                    IGui.insertTranslation(
+                                            "gui.mtr.station_cjk", "gui.mtr.station", 1, stationName
+                                    ),
+                                    totalLength / logoSize, lineNames.toArray(new String[lineNamesLength]), lineColors.toArray(new Integer[lineNamesLength]), lineNamesLength, exitCode).resourceLocation :
+                            ClientData.DATA_CACHE.getStationNameEntrance(
+                                    propagateProperty < 2 || propagateProperty >= 4 ? ARGB_WHITE : ARGB_BLACK,
+                                    IGui.insertTranslation(
+                                            "gui.mtr.station_cjk", "gui.mtr.station", 1, stationName
+                                    ),
+                                    totalLength / logoSize).resourceLocation, false, RenderTrains.QueuedRenderLayer.INTERIOR, (matrices, vertexConsumer) -> {
+                        storedMatrixTransformations.transform(matrices);
+                        IDrawing.drawTexture(matrices, vertexConsumer, -0.5F, -logoSize / 2, 1, logoSize, (float) (lengthLeft - 1) / totalLength, 0, (float) lengthLeft / totalLength, 1, facing, color, light);
+                        matrices.popPose();
+                    });
+        } else {
+            RenderTrains.scheduleRender(ClientData.DATA_CACHE.getStationName(stationName, totalLength).resourceLocation, false, RenderTrains.QueuedRenderLayer.EXTERIOR, (matrices, vertexConsumer) -> {
+                storedMatrixTransformations.transform(matrices);
+                IDrawing.drawTexture(matrices, vertexConsumer, -0.5F, -0.5F, 1, 1, (float) (lengthLeft - 1) / totalLength, 0, (float) lengthLeft / totalLength, 1, facing, color, light);
+                matrices.popPose();
+            });
+        }
+    }
+
+    private int getLength(BlockGetter world, BlockPos pos, boolean lookRight) {
+        if (world == null) {
+            return 1;
+        }
+        final Direction facing = IBlock.getStatePropertySafe(world, pos, BlockStationNameBase.FACING);
+        final Block thisBlock = world.getBlockState(pos).getBlock();
+
+        int length = 1;
+        while (true) {
+            final Block checkBlock = world.getBlockState(pos.relative(lookRight ? facing.getClockWise() : facing.getCounterClockWise(), length)).getBlock();
+            if (checkBlock instanceof BlockStationNameBase && checkBlock == thisBlock) {
+                length++;
+            } else {
+                break;
+            }
+        }
+
+        return length;
+    }
+}

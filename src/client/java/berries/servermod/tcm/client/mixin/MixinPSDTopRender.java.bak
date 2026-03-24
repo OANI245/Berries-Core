@@ -1,0 +1,334 @@
+package berries.servermod.tcm.client.mixin;
+
+import berries.servermod.tcm.block.MixinStates;
+import berries.servermod.tcm.client.data.TCMDynamicResourceCache;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
+import org.mtr.mod.block.BlockPSDTop;
+import org.mtr.mod.render.RenderPSDTop;
+import org.mtr.mod.render.RenderRouteBase;
+import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
+
+import java.lang.reflect.InvocationTargetException;
+
+import static berries.servermod.tcm.block.MixinStates.BEIJING_STYLE;
+import static berries.servermod.tcm.block.MixinStates.PSD_TOP_DISPLAY_TYPE;
+
+@Mixin(value = RenderPSDTop.class)
+public abstract class MixinPSDTopRender extends RenderRouteBase<BlockPSDTop.BlockEntity> {
+    @Final
+    @Shadow(remap = false)
+    private static float END_FRONT_OFFSET;
+
+    @Final
+    @Shadow(remap = false)
+    private static float BOTTOM_DIAGONAL_OFFSET;
+
+    @Final
+    @Shadow(remap = false)
+    private static float ROOT_TWO_SCALED;
+
+    @Final
+    @Shadow(remap = false)
+    private static float BOTTOM_END_DIAGONAL_OFFSET;
+
+    @Unique
+    private static final float F_1 = 1 / 64.0F;
+
+    @Unique
+    private static final float F_2 = 0.02F;
+
+    @Unique
+    private static final float F_3 = 1 / 64.0F;
+
+    @Unique
+    private static final float F_4 = 0.035F;
+
+    @Unique
+    private static final float COLOR_STRIP_START = 14.5F / 16;
+
+    @Unique
+    private static final float COLOR_STRIP_END = 15 / 16F;
+
+    @Unique
+    private static final float COLOR_STRIP_START_2 = 3.5F / 16;
+
+    @Unique
+    private static final float COLOR_STRIP_END_2 = 4 / 16F;
+
+    @Unique
+    protected final float topPadding = 7.5F / 16;
+
+    @Unique
+    protected final float bottomPadding = 1.5F / 16;
+
+    @Unique
+    protected final float sidePadding = 0.125F / 16;
+
+    @Unique
+    private final float z = (2 - SMALL_OFFSET_16) / 16;
+
+    @Unique
+    private final Property<Integer> arrowDirectionProperty = ARROW_DIRECTION;
+
+    public MixinPSDTopRender(BlockEntityRenderDispatcher dispatcher) {
+        super(dispatcher);
+    }
+
+
+    @Override
+    public void render(BlockPSDTop.TileEntityPSDTop blockEntity, float f, PoseStack poseStack, MultiBufferSource multiBufferSource, int i, int j) {
+        final Level world = blockEntity.getLevel();
+        if (world == null) {
+            return;
+        }
+
+        final BlockPos pos = blockEntity.getBlockPos();
+        final BlockState state = world.getBlockState(pos);
+
+        if (!(state.getBlock() instanceof BlockPSDTop)) {
+            return;
+        }
+
+        final Direction facing = IBlock.getStatePropertySafe(state, HorizontalDirectionalBlock.FACING);
+
+        MixinStates.BeijingStylePSDTopType type = IBlock.getStatePropertySafe(blockEntity.getBlockState(), PSD_TOP_DISPLAY_TYPE);
+
+        final StoredMatrixTransformations storedMatrixTransformations = new StoredMatrixTransformations();
+        storedMatrixTransformations.add(matricesNew -> {
+            matricesNew.translate(0.5 + blockEntity.getBlockPos().getX(), blockEntity.getBlockPos().getY(), 0.5 + blockEntity.getBlockPos().getZ());
+            UtilitiesClient.rotateYDegrees(matricesNew, -facing.toYRot());
+        });
+
+        renderAdditionalUnmodified(storedMatrixTransformations.copy(), state, facing, i);
+
+        if (!RenderTrains.shouldNotRender(pos, RenderTrains.maxTrainRenderDistance, null)) {
+            final long platformId = blockEntity.getPlatformId(ClientData.PLATFORMS, ClientData.DATA_CACHE);
+
+            if (platformId != 0) {
+                storedMatrixTransformations.add(matricesNew -> {
+                    matricesNew.translate(0, 1, 0);
+                    UtilitiesClient.rotateZDegrees(matricesNew, 180);
+                    matricesNew.translate(-0.5, -getAdditionalOffset(state), z);
+                });
+
+                final int leftBlocks = getTextureNumber(world, pos, facing, true);
+                final int rightBlocks = getTextureNumber(world, pos, facing, false);
+                final int color = getShadingColor(facing, 0xFFFFFFFF);
+                final Object renderType;
+                try {
+                    renderType = RenderPSDTop.class.getDeclaredMethod("getRenderType", BlockGetter.class, BlockPos.class, BlockState.class).invoke(this, world, pos.relative(facing.getCounterClockWise(), leftBlocks), state);
+                } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+                    throw new RuntimeException(e);
+                }
+
+                try {
+                    if ((renderType == Class.forName("mtr.render.RenderRouteBase$RenderType").getField("ARROW").get(null) || renderType == Class.forName("mtr.render.RenderRouteBase$RenderType").getField("ROUTE").get(null)) && IBlock.getStatePropertySafe(state, SIDE_EXTENDED) != IBlock.EnumSide.SINGLE) {
+                        final float width = leftBlocks + rightBlocks + 1 - sidePadding * 2;
+                        final float height = 1 - topPadding - bottomPadding;
+                        final int arrowDirection = IBlock.getStatePropertySafe(state, arrowDirectionProperty);
+
+                        final ResourceLocation resourceLocation;
+                        boolean transparentWhite = true;
+                        if (renderType == Class.forName("mtr.render.RenderRouteBase$RenderType").getField("ARROW").get(null)) {
+                            if (state.getValue(BEIJING_STYLE) == 0 || type == MixinStates.BeijingStylePSDTopType.DEFAULT) {
+                                resourceLocation = TCMDynamicResourceCache.instance.getDirectionArrow(platformId, (arrowDirection & 0b01) > 0, (arrowDirection & 0b10) > 0, IGui.HorizontalAlignment.CENTER, true, 0.25F, width / height, ARGB_WHITE, ARGB_BLACK, ARGB_WHITE, blockEntity.getBlockState().getValue(BEIJING_STYLE)).resourceLocation;
+                            } else {
+                                Station station = RailwayData.getStation(ClientData.STATIONS, ClientData.DATA_CACHE, pos);
+                                String stationName;
+                                if (station == null) {
+                                    stationName = "";
+                                } else {
+                                    stationName = station.name;
+                                }
+                                resourceLocation = TCMDynamicResourceCache.instance.getPSDTopStationName(platformId, stationName, HorizontalAlignment.CENTER, true, 0.25F, width / height, ARGB_WHITE, ARGB_BLACK, ARGB_WHITE, blockEntity.getBlockState().getValue(BEIJING_STYLE)).resourceLocation;
+                            }
+                        } else {
+                            if (state.getValue(BEIJING_STYLE) != 0) {
+                                resourceLocation = TCMDynamicResourceCache.instance.getRouteMap(platformId, false, arrowDirection == 2, width / height, transparentWhite).resourceLocation;
+                            } else {
+                                resourceLocation = ClientData.DATA_CACHE.getRouteMap(platformId, false, arrowDirection == 2, width / height, transparentWhite).resourceLocation;
+                            }
+                        }
+
+                        RenderTrains.scheduleRender(resourceLocation, false, RenderTrains.QueuedRenderLayer.EXTERIOR, (matricesNew, vertexConsumer) -> {
+                            storedMatrixTransformations.transform(matricesNew);
+                            IDrawing.drawTexture(matricesNew, vertexConsumer, leftBlocks == 0 ? sidePadding : 0, topPadding, 0, 1 - (rightBlocks == 0 ? sidePadding : 0), 1 - bottomPadding, 0, (leftBlocks - (leftBlocks == 0 ? 0 : sidePadding)) / width, 0, (width - rightBlocks + (rightBlocks == 0 ? 0 : sidePadding)) / width, 1, facing.getOpposite(), color, i);
+                            matricesNew.popPose();
+                        });
+                    }
+                } catch (IllegalAccessException | NoSuchFieldException | ClassNotFoundException e) {
+                    throw new RuntimeException(e);
+                }
+
+                renderAdditional(storedMatrixTransformations, platformId, state, leftBlocks, rightBlocks, facing.getOpposite(), color, i);
+            }
+        }
+    }
+
+    @Shadow
+    protected abstract void renderAdditionalUnmodified(StoredMatrixTransformations storedMatrixTransformations, BlockState state, Direction facing, int light);
+
+    @Unique
+    protected void renderAdditional(StoredMatrixTransformations storedMatrixTransformations, long platformId, BlockState state, int leftBlocks, int rightBlocks, Direction facing, int color, int light) {
+        final boolean isNotPersistent = IBlock.getStatePropertySafe(state, BlockPSDTop.PERSISTENT) == BlockPSDTop.EnumPersistent.NONE;
+        final boolean airLeft = isNotPersistent && IBlock.getStatePropertySafe(state, BlockPSDTop.AIR_LEFT);
+        final boolean airRight = isNotPersistent && IBlock.getStatePropertySafe(state, BlockPSDTop.AIR_RIGHT);
+        RenderTrains.scheduleRender(TCMDynamicResourceCache.instance.getColorStrip(platformId).resourceLocation, false, RenderTrains.QueuedRenderLayer.EXTERIOR, (matrices, vertexConsumer) -> {
+            storedMatrixTransformations.transform(matrices);
+//            int light01 = light/* - (int) Math.floor(light / 16.0)*/;
+//            int light02 = light/* - (int) Math.floor(light / 8.0)*/;
+//            int light11 = light/* - (int) Math.floor(light / 24.0)*/;
+//            int light12 = light/* - (int) Math.floor(light / 8.0)*/;
+/*
+            if (light01 < 2) {
+                light01 = light;
+            }
+
+            if (light02 < 2) {
+                light02 = light;
+            }
+
+            if (light11 < 2) {
+                light11 = light;
+            }
+
+            if (light12 < 2) {
+                light12 = light;
+            }*/
+
+            if (state.hasProperty(BEIJING_STYLE) && state.getValue(BEIJING_STYLE) > 0) {
+                IDrawing.drawTexture(matrices, vertexConsumer, airLeft ? 0.625F : 0, COLOR_STRIP_START + 1 / 96.0F, 0, airRight ? 0.375F : 1, COLOR_STRIP_END, 0, 0, 0, 1, 1, facing, color, light);
+                IDrawing.drawTexture(
+                        matrices, vertexConsumer,
+                        airLeft ? 0.625F : 0, COLOR_STRIP_END + (COLOR_STRIP_END - COLOR_STRIP_START + F_1), F_2,
+                        airRight ? 0.375F : 1, COLOR_STRIP_END + (COLOR_STRIP_END - COLOR_STRIP_START + F_1), F_2,
+                        airRight ? 0.375F : 1, COLOR_STRIP_END, 0,
+                        airLeft ? 0.625F : 0, COLOR_STRIP_END, 0,
+                        0, 0, 1, 1,
+                        facing, color, light
+                );
+                IDrawing.drawTexture(
+                        matrices, vertexConsumer,
+                        airLeft ? 0.625F : 0, COLOR_STRIP_END + (COLOR_STRIP_END - COLOR_STRIP_START + F_1) + F_3, F_4 + F_2,
+                        airRight ? 0.375F : 1, COLOR_STRIP_END + (COLOR_STRIP_END - COLOR_STRIP_START + F_1) + F_3, F_4 + F_2,
+                        airRight ? 0.375F : 1, COLOR_STRIP_END + (COLOR_STRIP_END - COLOR_STRIP_START + F_1), F_2,
+                        airLeft ? 0.625F : 0, COLOR_STRIP_END + (COLOR_STRIP_END - COLOR_STRIP_START + F_1), F_2,
+                        0, 0, 1, 1,
+                        facing, color, light
+                );
+                if (airLeft) {
+                    IDrawing.drawTexture(matrices, vertexConsumer, END_FRONT_OFFSET, COLOR_STRIP_START + 1 / 96.0F, -0.625F - END_FRONT_OFFSET, 0.75F + END_FRONT_OFFSET, COLOR_STRIP_END, 0.125F - END_FRONT_OFFSET, facing, -1, light);
+                    IDrawing.drawTexture(
+                            matrices, vertexConsumer,
+                            END_FRONT_OFFSET, COLOR_STRIP_END + (COLOR_STRIP_END - COLOR_STRIP_START + F_1), -0.625F - END_FRONT_OFFSET + F_2,
+                            0.75F + END_FRONT_OFFSET, COLOR_STRIP_END + (COLOR_STRIP_END - COLOR_STRIP_START + F_1), 0.125F - END_FRONT_OFFSET + F_2,
+                            0.75F + END_FRONT_OFFSET, COLOR_STRIP_END, 0.125F - END_FRONT_OFFSET,
+                            END_FRONT_OFFSET, COLOR_STRIP_END, -0.625F - END_FRONT_OFFSET,
+                            0, 0, 1, 1,
+                            facing, color, light
+                    );
+                    IDrawing.drawTexture(
+                            matrices, vertexConsumer,
+                            END_FRONT_OFFSET, COLOR_STRIP_END + (COLOR_STRIP_END - COLOR_STRIP_START + F_1) + F_3, -0.625F - END_FRONT_OFFSET + F_2 + F_4,
+                            0.75F + END_FRONT_OFFSET, COLOR_STRIP_END + (COLOR_STRIP_END - COLOR_STRIP_START + F_1) + F_3, 0.125F - END_FRONT_OFFSET + F_2 + F_4,
+                            0.75F + END_FRONT_OFFSET, COLOR_STRIP_END + (COLOR_STRIP_END - COLOR_STRIP_START + F_1), 0.125F - END_FRONT_OFFSET + F_2,
+                            END_FRONT_OFFSET, COLOR_STRIP_END + (COLOR_STRIP_END - COLOR_STRIP_START + F_1), -0.625F - END_FRONT_OFFSET + F_2,
+                            0, 0, 1, 1,
+                            facing, color, light
+                    );
+                }
+                if (airRight) {
+                    IDrawing.drawTexture(matrices, vertexConsumer, 0.25F - END_FRONT_OFFSET, COLOR_STRIP_START + 1 / 96.0F, 0.125F - END_FRONT_OFFSET, 1 - END_FRONT_OFFSET, COLOR_STRIP_END, -0.625F - END_FRONT_OFFSET, facing, -1, light);
+                    IDrawing.drawTexture(
+                            matrices, vertexConsumer,
+                            0.25F - END_FRONT_OFFSET, COLOR_STRIP_END + (COLOR_STRIP_END - COLOR_STRIP_START + F_1), 0.125F - END_FRONT_OFFSET + F_2,
+                            1 - END_FRONT_OFFSET, COLOR_STRIP_END + (COLOR_STRIP_END - COLOR_STRIP_START + F_1), -0.625F - END_FRONT_OFFSET + F_2,
+                            1 - END_FRONT_OFFSET, COLOR_STRIP_END, -0.625F - END_FRONT_OFFSET,
+                            0.25F - END_FRONT_OFFSET, COLOR_STRIP_END, 0.125F - END_FRONT_OFFSET,
+                            0, 0, 1, 1,
+                            facing, color, light
+                    );
+                    IDrawing.drawTexture(
+                            matrices, vertexConsumer,
+                            0.25F - END_FRONT_OFFSET, COLOR_STRIP_END + (COLOR_STRIP_END - COLOR_STRIP_START + F_1) + F_3, 0.125F - END_FRONT_OFFSET + F_2 + F_4,
+                            1 - END_FRONT_OFFSET, COLOR_STRIP_END + (COLOR_STRIP_END - COLOR_STRIP_START + F_1) + F_3, -0.625F - END_FRONT_OFFSET + F_2 + F_4,
+                            1 - END_FRONT_OFFSET, COLOR_STRIP_END + (COLOR_STRIP_END - COLOR_STRIP_START + F_1), -0.625F - END_FRONT_OFFSET + F_2,
+                            0.25F - END_FRONT_OFFSET, COLOR_STRIP_END + (COLOR_STRIP_END - COLOR_STRIP_START + F_1), 0.125F - END_FRONT_OFFSET + F_2,
+                            0, 0, 1, 1,
+                            facing, color, light
+                    );
+                }
+            } else {
+                IDrawing.drawTexture(matrices, vertexConsumer, airLeft ? 0.625F : 0, COLOR_STRIP_START, 0, airRight ? 0.375F : 1, COLOR_STRIP_END, 0, facing, color, light);
+                if (airLeft) {
+                    IDrawing.drawTexture(matrices, vertexConsumer, END_FRONT_OFFSET, COLOR_STRIP_START, -0.625F - END_FRONT_OFFSET, 0.75F + END_FRONT_OFFSET, COLOR_STRIP_END, 0.125F - END_FRONT_OFFSET, facing, -1, light);
+                }
+                if (airRight) {
+                    IDrawing.drawTexture(matrices, vertexConsumer, 0.25F - END_FRONT_OFFSET, COLOR_STRIP_START, 0.125F - END_FRONT_OFFSET, 1 - END_FRONT_OFFSET, COLOR_STRIP_END, -0.625F - END_FRONT_OFFSET, facing, -1, light);
+                }
+            }
+            matrices.popPose();
+        });
+    }
+
+    @Shadow
+    protected abstract float getAdditionalOffset(BlockState state);
+
+    @Unique
+    private int getTextureNumber(BlockGetter world, BlockPos pos, Direction facing, boolean searchLeft) {
+        int number = 0;
+        final Block thisBlock = world.getBlockState(pos).getBlock();
+
+        while (true) {
+            final BlockState state = world.getBlockState(pos.relative(searchLeft ? facing.getCounterClockWise() : facing.getClockWise(), number));
+
+            if (state.getBlock() == thisBlock) {
+                final boolean isLeft = isLeft(state);
+                final boolean isRight = isRight(state);
+
+                if (number == 0 || (searchLeft ? !isRight : !isLeft)) {
+                    number++;
+                    if (searchLeft ? isLeft : isRight) {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        return number - 1;
+    }
+
+    @Unique
+    protected boolean isLeft(BlockState state) {
+        return IBlock.getStatePropertySafe(state, SIDE_EXTENDED) == IBlock.EnumSide.LEFT;
+    }
+
+    @Unique
+    protected boolean isRight(BlockState state) {
+        return IBlock.getStatePropertySafe(state, SIDE_EXTENDED) == IBlock.EnumSide.RIGHT;
+    }
+
+    @Unique
+    private static int getShadingColor(Direction facing, int grayscaleColorByte) {
+        final int colorByte = Math.round((grayscaleColorByte & 0xFF) * (facing.getAxis() == Direction.Axis.X ? 0.75F : 1));
+        return ARGB_BLACK | ((colorByte << 16) + (colorByte << 8) + colorByte);
+    }
+}

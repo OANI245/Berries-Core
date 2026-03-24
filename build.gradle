@@ -1,0 +1,271 @@
+import proguard.gradle.ProGuardTask
+
+import java.util.stream.Stream
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.guardsquare:proguard-gradle:7.8.1")
+    }
+}
+
+plugins {
+    id 'fabric-loom' version '1.15-SNAPSHOT'
+    id 'maven-publish'
+    id "com.github.johnrengelman.shadow" version "8.1.1" apply false
+}
+
+version = project.mod_version
+def buildVersion = getPNBVersion()
+group = project.maven_group
+
+apply plugin: "com.github.johnrengelman.shadow"
+
+base {
+    archivesName = project.archives_base_name
+}
+
+configurations {
+    shadowCommon
+}
+
+loom {
+    splitEnvironmentSourceSets()
+
+    mods {
+        "tcm" {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
+}
+
+repositories {
+    // Add repositories to retrieve artifacts from in here.
+    // You should only use this when depending on other mods because
+    // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
+    // See https://docs.gradle.org/current/userguide/declaring_repositories.html
+    // for more information about repositories.
+    mavenCentral()
+    maven { url "https://maven.shedaniel.me/" }
+    maven { url "https://maven.terraformersmc.com/releases/" }
+    maven { url "https://maven.nucleoid.xyz/" }
+    maven {
+        name 'IzzelAliz Maven'
+        url 'https://maven.izzel.io/releases/'
+    }
+    maven {
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+    }
+    // If you are on Fabric, uncomment this.
+    maven {
+        url 'https://raw.githubusercontent.com/Fuzss/modresources/main/maven/'
+        content {
+            includeGroup 'fuzs.forgeconfigapiport'
+        }
+    }
+}
+
+dependencies {
+    // To change the versions see the gradle.properties file
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    //classpath 'net.sf.proguard:proguard-gradle:6.0.3'
+
+    modImplementation("maven.modrinth:minecraft-transit-railway:FABRIC-4.0.3+1.20.1")
+    //modImplementation files("includeMods/mod2.jar")
+
+    modImplementation("me.shedaniel.cloth:cloth-config-fabric:11.1.136");
+    modImplementation("com.terraformersmc:modmenu:7.2.2")
+    include(modImplementation("me.lucko:fabric-permissions-api:0.3.1"))
+    //modImplementation(files("includeMods/mishanguc-1.5.3-1.20.1.jar"))
+    modImplementation("maven.modrinth:mishang-urban-construction:1.6.0-1.20.1")
+
+    // If you are on Fabric, uncomment this and find a compatible FCAPI version.
+    modApi "fuzs.forgeconfigapiport:forgeconfigapiport-fabric:20.4.3"
+    implementation "icyllis.modernui:ModernUI-Core:${modernui_version}"
+    // Modern UI core extensions
+    // Markdown (<=3.11.1) / Markflow (>=3.12.0) is required, others are optional
+    implementation "icyllis.modernui:ModernUI-Markflow:${modernui_version}"
+    // Choose one of Fabric or NeoForge
+    modImplementation("icyllis.modernui:ModernUI-Fabric:${minecraft_version}-${modernui_version}.1")
+    //modImplementation(files("includeMods/ModernUI-Fabric-1.20.4-3.12.0.1-universal.jar"))
+
+    implementation "javax.annotation:javax.annotation-api:1.3.2"
+    compileOnly "com.google.code.findbugs:jsr305:+"
+
+    compileOnly "com.guardsquare:proguard-gradle:7.8.1"
+
+    implementation "org.eclipse.jetty:jetty-http:11.0.25"
+    implementation "org.eclipse.jetty:jetty-io:11.0.25"
+    implementation "org.eclipse.jetty:jetty-server:11.0.25"
+    implementation "org.eclipse.jetty:jetty-servlet:11.0.25"
+    implementation "org.eclipse.jetty:jetty-util:11.0.25"
+    implementation "org.eclipse.jetty:jetty-util-ajax:11.0.25"
+    implementation "org.eclipse.jetty:jetty-security:11.0.25"
+    implementation "javax.servlet:servlet-api:3.0-alpha-1"
+    implementation "jakarta.servlet:jakarta.servlet-api:6.0.0"
+    implementation "org.apache.httpcomponents.client5:httpclient5:5.5"
+    implementation "commons-io:commons-io:2.13.0"
+
+    shadowCommon "org.eclipse.jetty:jetty-http:11.0.25"
+    shadowCommon "org.eclipse.jetty:jetty-io:11.0.25"
+    shadowCommon "org.eclipse.jetty:jetty-server:11.0.25"
+    shadowCommon "org.eclipse.jetty:jetty-servlet:11.0.25"
+    shadowCommon "org.eclipse.jetty:jetty-util:11.0.25"
+    shadowCommon "org.eclipse.jetty:jetty-util-ajax:11.0.25"
+    shadowCommon "org.eclipse.jetty:jetty-security:11.0.25"
+    shadowCommon "javax.servlet:servlet-api:3.0-alpha-1"
+    shadowCommon "jakarta.servlet:jakarta.servlet-api:6.0.0"
+    shadowCommon "commons-io:commons-io:2.13.0"
+}
+
+/*mixin {
+    debug = true
+    dumpTargetOnFailure = true
+}*/
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "minecraft_version", project.minecraft_version
+    inputs.property "loader_version", project.loader_version
+    filteringCharset "UTF-8"
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version,
+                "minecraft_version": project.minecraft_version,
+                "loader_version": project.loader_version
+    }
+}
+
+tasks.register("addPNBVersion") {
+    FileWriter s = new FileWriter(new File("./src/main/resources/pnb.txt"))
+    buildVersion = String.valueOf(++Integer.valueOf(buildVersion))
+    s.write(buildVersion)
+    s.flush()
+    s.close()
+}
+
+String getPNBVersion() {
+    FileInputStream s = new FileInputStream(new File("./src/main/resources/pnb.txt"))
+    var l = s.readLines()
+    s.close()
+    println "Current build version: " + l.get(0)
+    return l.get(0)
+}
+
+build {
+    dependsOn addPNBVersion
+}
+
+def targetJavaVersion = 17
+tasks.withType(JavaCompile).configureEach {
+    // ensure that the encoding is set to UTF-8, no matter what the system default is
+    // this fixes some edge cases with special characters not displaying correctly
+    // see http://yodaconditions.net/blog/fix-for-java-file-encoding-problems-with-gradle.html
+    // If Javadoc is generated, this must be specified in that task too.
+    it.options.encoding = "UTF-8"
+    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
+        it.options.release.set(targetJavaVersion)
+    }
+}
+
+java {
+    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+    if (JavaVersion.current() < javaVersion) {
+        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+    }
+    // Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
+    // if it is present.
+    // If you remove this line, sources will not be generated.
+    withSourcesJar()
+}
+
+/*task proguard(type: ProGuardTask, dependsOn: build) {
+    ignorewarnings()
+    // 输出混淆前->混淆后的映射
+    printmapping "$buildDir/mapping.txt"
+    // 混淆规则文件
+    configuration 'proguard.pro'
+
+    // 混淆输入
+    //class 混淆
+    injars "$buildDir/libs/TCM-${rootProject.mod_version}-build.${rootProject.build_version}.jar"
+
+    // 混淆输出
+    outjars "$buildDir/libs/TCM-${rootProject.mod_version}-build.${rootProject.build_version}-pro.jar"
+
+    verbose()
+    printseeds()
+    printusage()
+}*/
+
+shadowJar {
+    from(sourceSets.main.output)
+    from(sourceSets.client.output)
+
+    version = "${rootProject.mod_version}-build.${buildVersion}"
+
+    configurations = [project.configurations.shadowCommon]
+    archiveClassifier = "dev-shadow"
+    relocate "jakarta.servlet", "berries.implementations.jakarta.servlet"
+    relocate "javax.servlet", "berries.implementations.javax.servlet"
+    relocate "org.eclipse", "berries.implementations.org.eclipse"
+    relocate "org.apache", "berries.implementations.org.apache"
+}
+
+remapJar {
+    input.set shadowJar.archiveFile
+    dependsOn shadowJar
+}
+
+jar {
+    from("LICENSE") {
+        rename { "${it}_${project.archivesBaseName}" }
+    }
+}
+
+tasks.register('syncModForTest') {
+    // 创建一个带缓冲区的输入流
+    BufferedInputStream bis = new BufferedInputStream(new FileInputStream("./build/libs/TCM-${version}.jar"));
+    // 创建一个带缓冲区的输出流
+    File fj = new File("C:/Users/zu2ht/Documents/PCL/.minecraft/versions/Tiancheng3/mods/TCM-${version}.jar")
+    if (!fj.exists()) {
+        fj.createNewFile()
+    }
+    BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream("C:/Users/zu2ht/Documents/PCL/.minecraft/versions/Tiancheng3/mods/TCM-${version}.jar"));
+
+    // 定义一个字节数组，作为缓冲区
+    byte[] buff = new byte[1024];
+    int len;
+    while ((len = bis.read(buff)) != -1) {
+        bos.write(buff, 0, len); // 从第一个字节开始，向文件写入len个字节
+    }
+    bis.close();
+    bos.close();
+}
+
+// configure the maven publication
+publishing {
+    publications {
+        create("mavenJava", MavenPublication) {
+            artifactId = project.archives_base_name
+            from components.java
+        }
+    }
+
+    // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
+    repositories {
+        // Add repositories to publish to here.
+        // Notice: This block does NOT have the same function as the block in the top level.
+        // The repositories here will be used for publishing your artifact, not for
+        // retrieving dependencies.
+    }
+}

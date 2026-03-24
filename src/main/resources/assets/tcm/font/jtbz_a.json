@@ -1,0 +1,11 @@
+{
+    "providers": [
+        {
+			"type": "ttf",
+			"file": "tcm:jtbz_a.ttf",
+			"size": 12.0,
+			"oversample": 6.0,
+            "shift": [0, 0]
+		}
+    ]
+}

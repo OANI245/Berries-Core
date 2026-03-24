@@ -1,0 +1,105 @@
+@media (prefers-color-scheme: light){
+    .button-glass {
+        position: relative;
+        padding: 12px 20px;
+        border: none;
+        background: rgba(255,139,0,0.15);
+        backdrop-filter: blur(12px);
+        border-radius: 100px;
+        box-shadow: inset 3px 3px 1px -3px rgba(255, 255, 255, 0.8),
+        inset 2px 2px 1px -2px rgba(255, 255, 255, 0.45),
+        inset -2px -2px 1px -2px rgba(255, 255, 255, 0.35),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+        inset 0 0 8px 0 rgba(10, 10, 10, 0.05),
+        0 0 2px 0 rgba(0, 0, 0, 0.1),
+        0 1px 8px 0 rgba(0, 0, 0, 0.1);
+        text-align: center;
+        font-size: 10px;
+        font: var(--md-ref-typeface-plain);
+        color: var(--md-sys-color-on-surface);
+        transition: 0.1s;
+    }
+
+    .button-glass-green {
+        position: relative;
+        padding: 12px 20px;
+        border: none;
+        background: rgba(114, 255, 59, 0.2);
+        backdrop-filter: blur(12px);
+        border-radius: 100px;
+        box-shadow: inset 3px 3px 1px -3px rgba(255, 255, 255, 0.8),
+        inset 2px 2px 1px -2px rgba(255, 255, 255, 0.45),
+        inset -2px -2px 1px -2px rgba(255, 255, 255, 0.35),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+        inset 0 0 8px 0 rgba(10, 10, 10, 0.05),
+        0 0 2px 0 rgba(0, 0, 0, 0.1),
+        0 1px 8px 0 rgba(0, 0, 0, 0.1);
+        text-align: center;
+        font-size: 10px;
+        font: var(--md-ref-typeface-plain);
+        color: var(--md-sys-color-on-surface);
+        transition: 0.1s;
+    }
+}
+
+@media (prefers-color-scheme: dark){
+    .button-glass {
+        position: relative;
+        padding: 12px 20px;
+        border: none;
+        background: rgba(164, 92, 0, 0.3);
+        backdrop-filter: blur(12px);
+        border-radius: 100px;
+        box-shadow: inset 3px 3px 1px -3px rgba(255, 255, 255, 0.75),
+        inset 3px 3px 1px -3px rgba(255, 255, 255, 0.45),
+        inset 1px 1px 1px 1px rgba(255, 255, 255, 0.25),
+        inset -1px -1px 1px 1px rgba(255, 255, 255, 0.20),
+        inset 0 0 1px 1px rgba(255, 255, 255, 0.15),
+        inset 0 0 1px 1px rgba(153, 153, 153, 0.15),
+        inset 0 0 16px 0 rgba(14, 14, 14, 0.2),
+        0 0 2px 0 rgba(0, 0, 0, 0.1),
+        0 1px 8px 0 rgba(0, 0, 0, 0.1);
+        text-align: center;
+        font-size: 10px;
+        font: var(--md-ref-typeface-plain);
+        color: var(--md-sys-color-on-surface);
+        transition: 0.1s;
+    }
+
+    .button-glass-green {
+        position: relative;
+        padding: 12px 20px;
+        border: none;
+        background: rgba(101, 255, 44, 0.2);
+        backdrop-filter: blur(12px);
+        border-radius: 100px;
+        box-shadow: inset 3px 3px 1px -3px rgba(255, 255, 255, 0.75),
+        inset 3px 3px 1px -3px rgba(255, 255, 255, 0.45),
+        inset 1px 1px 1px 1px rgba(255, 255, 255, 0.25),
+        inset -1px -1px 1px 1px rgba(255, 255, 255, 0.20),
+        inset 0 0 1px 1px rgba(255, 255, 255, 0.15),
+        inset 0 0 1px 1px rgba(153, 153, 153, 0.15),
+        inset 0 0 16px 0 rgba(14, 14, 14, 0.2),
+        0 0 2px 0 rgba(0, 0, 0, 0.1),
+        0 1px 8px 0 rgba(0, 0, 0, 0.1);
+        text-align: center;
+        font-size: 10px;
+        font: var(--md-ref-typeface-plain);
+        color: var(--md-sys-color-on-surface);
+        transition: 0.1s;
+    }
+}
+
+.button-glass:hover {
+    position: relative;
+    top: -2px;
+    padding: 14px 22px;
+    transition: 0.1s;
+}
+
+.button-glass:active {
+    position: relative;
+    top: -4px;
+    padding: 16px 26px;
+    transition: 0.1s;
+}

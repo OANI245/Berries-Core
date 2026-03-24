@@ -1,0 +1,11 @@
+{
+    "providers": [
+        {
+			"type": "ttf",
+			"file": "modernui:aph.ttf",
+			"size": 10.0,
+			"oversample": 6.0,
+            "shift": [0, 0]
+		}
+    ]
+}

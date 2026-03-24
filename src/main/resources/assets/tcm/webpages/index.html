@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>Download Mod</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="css/index.css"/>
+    <link rel="stylesheet" href="css/controls.css"/>
+    <!--<script type="importmap">
+        {
+          "imports": {
+            "defines": "js/defines.js",
+            "fetch": "js/fetch.js",
+            "info_data": "js/info_data.js"
+          }
+        }
+    </script>-->
+    <script type="module" src="js/jquery-3.7.1.min.js"></script>
+    <script type="module" src="js/defines.js"></script>
+    <script type="module" src="js/fetch.js"></script>
+    <script type="module" src="js/info_data.js"></script>
+    <script type="module" src="js/bundle.js"></script>
+    <script type="module" src="js/index.js"></script>
+</head>
+<body onload="load()">
+<div class="acrylic-layer" id="layer1" style="display: none;"></div>
+<div class="color-layer" id="layer2" style="display: none;"></div>
+<div class="container" id="main" style="display: none;">
+    <img src="/logo" style="width: 50%; height: 50%;" id="mod-logo" alt="Mod Logo"/>
+    <p class="large_text" id="mod-name">Berries Core</p>
+    <p id="mod-version">Version: --.--.--.----.--</p>
+    <button id="download-button" class="button-glass" onclick="download()">Download</button>
+</div>
+</body>
+</html>

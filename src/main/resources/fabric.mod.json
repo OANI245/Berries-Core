@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "tcm",
+  "version": "${version}",
+  "name": "Tiancheng Client Mod",
+  "description": "Tiancheng Official Mod.",
+  "authors": ["OANI245", "花海"],
+  "contact": {},
+  "icon": "assets/tcm/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "client": [
+      "berries.servermod.tcm.client.TCMClient"
+    ],
+    "main": [
+      "berries.servermod.tcm.TCM"
+    ],
+    "server": [
+      "berries.servermod.tcm.TCMServer"
+    ],
+    "modmenu": [
+      "berries.servermod.tcm.client.ModMenuClient"
+    ]
+  },
+  "mixins": [
+    "tcm.mixins.json",
+    {
+      "config": "tcm.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "java": ">=21",
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "mtr": "*",
+	"modernui": ">=3.12.0.1",
+    "minecraft": "${minecraft_version}"
+  }
+}

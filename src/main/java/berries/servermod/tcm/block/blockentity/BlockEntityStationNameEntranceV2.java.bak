@@ -1,0 +1,72 @@
+package berries.servermod.tcm.block.blockentity;
+
+import net.minecraft.core.BlockPos;
+import org.mtr.mapping.holder.BlockEntityAbstractMapping;
+import org.mtr.mapping.holder.BlockEntityType;
+import org.mtr.mapping.holder.CompoundTag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
+import org.jetbrains.annotations.NotNull;
+import org.mtr.mapping.holder.BlockState;
+import org.mtr.mod.block.BlockStationNameBase;
+import org.mtr.mod.block.BlockStationNameEntrance;
+import org.mtr.mod.block.IBlock;
+
+public class BlockEntityStationNameEntranceV2 extends BlockStationNameEntrance.BlockEntity {
+    protected long selectedExitZone = 0;
+
+    public BlockEntityStationNameEntranceV2(BlockPos pos, BlockState state) {
+        super(new BlockEntityType<>(BlockEntityTypes.StaticFields.TILE_ENTITY_STATION_NAME_ENTRANCE), new org.mtr.mapping.holder.BlockPos(pos), state, 0, 0.00625F, false);
+    }
+
+    @Override
+    public void readCompoundTag(CompoundTag compoundTag) {
+        selectedExitZone = compoundTag.getLong("selected_exit_zone");
+        super.readCompoundTag(compoundTag);
+    }
+
+    @Override
+    public void writeCompoundTag(CompoundTag compoundTag) {
+        compoundTag.putLong("selected_exit_zone", selectedExitZone);
+        super.writeCompoundTag(compoundTag);
+    }
+
+    public void setSelectedExitZone(long value) {
+        selectedExitZone = value;
+        setChanged();
+        syncData();
+    }
+
+    public long getSelectedExitZone() {
+        return selectedExitZone;
+    }
+
+    @Override
+    public int getColor(BlockState state) {
+        return switch (IBlock.getStatePropertySafe(state, BlockStationNameBase.COLOR)) {
+            case 1 -> ARGB_LIGHT_GRAY;
+            case 2 -> ARGB_BLACK;
+            default -> ARGB_WHITE;
+        };
+    }
+
+    public void syncData() {
+        if (level instanceof ServerLevel) {
+            ((ServerLevel) level).getChunkSource().blockChanged(worldPosition);
+        }
+    }
+
+    /*@Override
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }*/
+
+    /*@Override
+    public final @NotNull CompoundTag getUpdateTag() {
+        final CompoundTag compoundTag = super.getUpdateTag();
+        writeCompoundTag(compoundTag);
+        return compoundTag;
+    }*/
+}

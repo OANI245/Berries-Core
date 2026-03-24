@@ -1,0 +1,22 @@
+{
+	"parent": "item/generated",
+	"textures": {
+		"1": "tcm:item/credit_card_back",
+		"layer0": "tcm:item/credit_card"
+	},
+	"elements": [
+		{
+			"from": [0, 0, 7.49219],
+			"to": [16, 16, 7.49219],
+			"rotation": {"angle": 0, "axis": "y", "origin": [0, 0, 7.49219]},
+			"faces": {
+				"north": {"uv": [0, 0, 16, 16], "texture": "#1"},
+				"east": {"uv": [0, 0, 0, 16], "texture": "#1"},
+				"south": {"uv": [0, 0, 16, 16], "texture": "#1"},
+				"west": {"uv": [0, 0, 0, 16], "texture": "#1"},
+				"up": {"uv": [0, 0, 16, 0], "texture": "#1"},
+				"down": {"uv": [0, 0, 16, 0], "texture": "#1"}
+			}
+		}
+	]
+}

@@ -1,0 +1,34 @@
+{
+  "trm01_door_close": {
+    "sounds": [
+      {
+        "name": "mtr:trm01/door_close",
+        "pitch": 1
+      }
+    ]
+  },
+  "trm01_door_open": {
+    "sounds": [
+      {
+        "name": "mtr:trm01/door_open",
+        "pitch": 1
+      }
+    ]
+  },
+  "trm01k_door_close": {
+    "sounds": [
+      {
+        "name": "mtr:trm01k/door_close",
+        "pitch": 1
+      }
+    ]
+  },
+  "trm01k_door_open": {
+    "sounds": [
+      {
+        "name": "mtr:trm01k/door_open",
+        "pitch": 1
+      }
+    ]
+  }
+}

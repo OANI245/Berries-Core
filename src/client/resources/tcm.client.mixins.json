@@ -1,0 +1,23 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "berries.servermod.tcm.client.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "MixinClientCache",
+    "MixinConnection",
+    "MixinGenericDirtMessageScreen",
+    "MixinLoadingOverlay",
+    "MixinMinecraft",
+    "MixinPSDTopRenderV2",
+    "MixinReceivingLevelScreen",
+    "MixinRenderRouteBase",
+    "MixinStationNameRenderer",
+    "MixinTicketMachineScreen"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "mixins": [
+  ]
+}
