@@ -184,7 +184,8 @@ public abstract class MixinTextContext {
                     break inj;
                 }
 
-                this.bold = this.italic = false;
+                this.bold = false;
+                this.italic = false;
 
                 Tag nbtText = nbt.get("text");
                 String textJson = nbt.getString("textJson");

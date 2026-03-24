@@ -1231,3 +1231,4 @@
 /.idea/vcs.xml
 /.idea/workspace.xml
 /logs/latest.log
+/run/
