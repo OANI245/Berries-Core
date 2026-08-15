@@ -1,0 +1,59 @@
+{
+  "positionDefinitions": [
+    {
+      "name": "526bb13a",
+      "positions": [
+        {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      ],
+      "positionsFlipped": []
+    },
+    {
+      "name": "810d9fea",
+      "positions": [
+        {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      ],
+      "positionsFlipped": []
+    },
+    {
+      "name": "dfe6a798",
+      "positions": [
+        {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      ],
+      "positionsFlipped": []
+    },
+    {
+      "name": "4512f2bf",
+      "positions": [],
+      "positionsFlipped": [
+        {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      ]
+    },
+    {
+      "name": "84c3e88a",
+      "positions": [],
+      "positionsFlipped": [
+        {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      ]
+    }
+  ]
+}

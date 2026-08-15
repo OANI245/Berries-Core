@@ -1,7 +1,7 @@
 import MOD_INFO_DATA from "./info_data.js";
 import {applyTheme, argbFromHex, themeFromSourceColor} from "./bundle.js";
 
-const theme = themeFromSourceColor(argbFromHex("#f38400"), []);
+const theme = themeFromSourceColor(argbFromHex("#8FFF64"), []);
 const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
 
 function load(bl) {

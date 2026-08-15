@@ -3,22 +3,19 @@ package berries.servermod.tcm.client.screen;
 import berries.servermod.tcm.UFEInfo;
 import berries.servermod.tcm.client.Config;
 import berries.servermod.tcm.client.TCMClient;
-import berries.servermod.tcm.client.data.TCMDynamicResourceCacheV2;
+import berries.servermod.tcm.client.flueroui.widget.ComboBox;
+import berries.servermod.tcm.client.flueroui.widget.FlueroButton;
 import berries.servermod.tcm.client.packet.PacketClearItemClient;
-import berries.servermod.tcm.client.packet.PacketGetItemClient;
 import berries.servermod.tcm.client.packet.PacketTeleportClient;
 import berries.servermod.tcm.client.screen.widget.*;
 import berries.servermod.tcm.signal.ItemGettingSignal;
 import berries.servermod.tcm.util.TCMComponent;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Tuple;
@@ -68,25 +65,15 @@ public class TCMMainScreenPages {
             Config.INSTANCE.sendMorningAndNightMessage = bl;
         }));
 
-        List<MetroButtonGrid.MetroButtonData> data0 = new ArrayList<>(List.of(new MetroButtonGrid.MetroButtonData[]{MetroButtonGrid.INSTANCE.dataOfGetItem(TCMComponent.text("获取鞘翅"), ItemGettingSignal.ELYTRA, 1), MetroButtonGrid.INSTANCE.dataOfGetItem(TCMComponent.text("获取烟花火箭*64"), ItemGettingSignal.FIREWORK_ROCKET, 64), MetroButtonGrid.INSTANCE.dataOfGetItem(TCMComponent.text("获取绿宝石*64"), ItemGettingSignal.EMERALD, 64), new MetroButtonGrid.MetroButtonData(TCMComponent.text("清空背包"), (btn) -> {
+        List<FlueroButtonGrid.FlueroButtonData> data0 = new ArrayList<>(List.of(new FlueroButtonGrid.FlueroButtonData[]{FlueroButtonGrid.INSTANCE.dataOfGetItem(TCMComponent.text("获取鞘翅"), ItemGettingSignal.ELYTRA, 1), FlueroButtonGrid.INSTANCE.dataOfGetItem(TCMComponent.text("获取烟花火箭*64"), ItemGettingSignal.FIREWORK_ROCKET, 64), FlueroButtonGrid.INSTANCE.dataOfGetItem(TCMComponent.text("获取天城币500"), ItemGettingSignal.POUND_100, 5), new FlueroButtonGrid.FlueroButtonData(TCMComponent.text("清空背包"), (btn) -> {
             PacketClearItemClient.sendClearItemC2S();
             Config.INSTANCE.saveConfig();
             Minecraft.getInstance().setScreen(null);
         })}));
 
-        if (Minecraft.getInstance().getCurrentServer() != null) {
-            data0.add(0, new MetroButtonGrid.MetroButtonData(TCMComponent.text("切换TABTPS Bossbar显示"), (btn) -> {
-                if (Minecraft.getInstance().player != null) {
-                    Minecraft.getInstance().player.connection.sendCommand("/tabtps toggle bossbar");
-                    Config.INSTANCE.saveConfig();
-                    Minecraft.getInstance().setScreen(null);
-                }
-            }));
-        }
-
         if (Minecraft.getInstance().level != null) {
             instance.addWidget(new TextWidget(titleX + 32, 80 + (heights.get()), contentWidth - (titleX * 2), 10, Minecraft.getInstance().font, TCMComponent.text("快捷功能").copy().withStyle(Style.EMPTY.withBold(true))));
-            instance.addWidgets(MetroButtonGrid.INSTANCE.newButtons(heights, 32, 95 + (heights.get()), this.screen.width, titleX - 1, data0.toArray(new MetroButtonGrid.MetroButtonData[0]), true));
+            instance.addWidgets(FlueroButtonGrid.INSTANCE.newButtons(heights, 32, 95 + (heights.get()), this.screen.width, titleX - 1, data0.toArray(new FlueroButtonGrid.FlueroButtonData[0]), true));
         }
 
         heights.addAndGet(16);
@@ -111,7 +98,7 @@ public class TCMMainScreenPages {
         } else {
             data1 = List.of(MetroTileGrid.INSTANCE.dataOfTeleport(TCMComponent.text("天城湖心"), TCMComponent.text("湖心位于湾流区，天城的出生点就位于此处，此地交通十分便利。"), new Vec3(-116.5, 66.5, -92.5) //坐标
             ), MetroTileGrid.INSTANCE.dataOfTeleport(TCMComponent.text("延海商业区"), TCMComponent.text("2024年8月起，天城开始重点建设城市建设项目，于是延海商业区应运而生，至今占据了湾流城建的一大部分。"), new Vec3(382.5, 65.5, 855.5) //坐标
-            ), MetroTileGrid.INSTANCE.dataOfTeleport(TCMComponent.text("天城北站"), TCMComponent.text("天城北站是天城第一座火车站，至2025年6月1日为止，天城北站已连接城际线路1条和地铁线路2条。"), new Vec3(735.5, 66.5, -11238.5) //坐标
+            ), MetroTileGrid.INSTANCE.dataOfTeleport(TCMComponent.text("天城北站"), TCMComponent.text("天城北站是天城第一座火车站，至2026年7月1日为止，天城北站已连接城际线路1条和地铁线路3条。"), new Vec3(735.5, 66.5, -11238.5) //坐标
             ));
         }
 
@@ -121,12 +108,34 @@ public class TCMMainScreenPages {
         return instance;
     }
 
+    @SuppressWarnings("all")
+    public Page getAboutPage() {
+        Page instance = this.screen.createPage(2, new TextWidget(titleX, titleY, contentWidth, titleHeight, Minecraft.getInstance().font, TCMComponent.translatable("gui.tcm.main.nav.3"), false, 2.6F));
+        var lx = titleX + this.screen.nav.getWidth() / 3;
+        var ltx = lx + 8;
+        var lty = Math.max(this.screen.height / 3, titleY + 16);
+        instance.addWidget(new ImageWidget(ltx, lty, 80, 80, GUILocations.LOGO_LOCATION));
+        instance.addWidget(new TextWidget(ltx, lty + 90, 150, 30, Minecraft.getInstance().font, TCMComponent.text(UFEInfo.MOD_NAME).plainCopy(), 2.0F));
+        instance.addWidget(new TextWidget(ltx, lty + 115, 150, 30, Minecraft.getInstance().font, TCMComponent.text(UFEInfo.MOD_VERSION + " build-" + UFEInfo.PNB_VERSION).plainCopy().setStyle(Style.EMPTY.withColor(ChatFormatting.GRAY)), 1.4F));
+        var rtx = (int)Math.max(ltx + 135, (this.screen.width / 8.0) * 3.0);
+        var rty =  Math.max(this.screen.height / 4, titleY + 16);
+        instance.addWidget(new TextWidget(rtx, rty, this.screen.width - rtx - titleX, 60, Minecraft.getInstance().font, TCMComponent.text("更新内容："), 2.25F));
+        int c = 0;
+        for (int i = 0; i < UFEInfo.CHANGE_LOGS.length; i++) {
+            var tw = new TextWidget(rtx, rty + 32 + (c * 14), this.screen.width - rtx - titleX, 14, Minecraft.getInstance().font, TCMComponent.text((i + 1) +". " + UFEInfo.CHANGE_LOGS[i]));
+            c += tw.getLineCount();
+            instance.addWidget(tw);
+        }
+        instance.addWidget(new TextWidget(this.screen.width / 2, Math.max(rty + 40 + (c * 14), this.screen.height - 35), Minecraft.getInstance().font.width(TCMComponent.translatable("gui.tcm.main.about.powered_by")) , 14, Minecraft.getInstance().font, TCMComponent.translatable("gui.tcm.main.about.powered_by").copy().setStyle(Style.EMPTY.withColor(ChatFormatting.GRAY)), TextWidget.Alignment.CENTER));
+        return instance;
+    }
+
     public Page getSettingsPage() {
         Page instance = this.screen.createPage(3, new TextWidget(titleX, titleY, titleHeight * 4 / 7 * 6, titleHeight * 4 / 7, Minecraft.getInstance().font, TCMComponent.translatable("gui.tcm.main.nav.4"), false, 2.6F));
 
         AtomicInteger heights = new AtomicInteger(0);
 
-        instance.addWidgets(getPropertyButton(heights, titleX + 32, 72, contentWidth - (titleX * 2), TCMComponent.translatable("gui.tcm.main.settings.property_1.title"), TCMComponent.translatable("gui.tcm.main.settings.property_1.description"), new Component[]{TCMComponent.translatable("gui.tcm.main.settings.property_1.value_1"), TCMComponent.translatable("gui.tcm.main.settings.property_1.value_2"), TCMComponent.translatable("gui.tcm.main.settings.property_1.value_3")}, switch (Config.INSTANCE.defaultPage) {
+        instance.addWidgets(getPropertyComboBox(heights, titleX + 32, 72, contentWidth - (titleX * 2), TCMComponent.translatable("gui.tcm.main.settings.property_1.title"), TCMComponent.translatable("gui.tcm.main.settings.property_1.description"), new Component[]{TCMComponent.translatable("gui.tcm.main.settings.property_1.value_1"), TCMComponent.translatable("gui.tcm.main.settings.property_1.value_2"), TCMComponent.translatable("gui.tcm.main.settings.property_1.value_3")}, switch (Config.INSTANCE.defaultPage) {
             case "PAGE_MAIN":
             default:
                 yield 0;
@@ -144,7 +153,7 @@ public class TCMMainScreenPages {
             TCMDynamicResourceCacheV2.instance.reload();
         }));*/
 
-        instance.addWidgets(getPropertyButton(heights, titleX + 32, 72 + heights.get(), contentWidth - (titleX * 2), TCMComponent.translatable("gui.tcm.main.settings.property_3.title"), TCMComponent.translatable("gui.tcm.main.settings.property_3.description"), new Component[]{TCMComponent.translatable("gui.tcm.main.settings.property_3.value_1"), TCMComponent.translatable("gui.tcm.main.settings.property_3.value_2"), TCMComponent.translatable("gui.tcm.main.settings.property_3.value_3")}, switch (Config.INSTANCE.ringLoadingAnimation) {
+        instance.addWidgets(getPropertyComboBox(heights, titleX + 32, 72 + heights.get(), contentWidth - (titleX * 2), TCMComponent.translatable("gui.tcm.main.settings.property_3.title"), TCMComponent.translatable("gui.tcm.main.settings.property_3.description"), new Component[]{TCMComponent.translatable("gui.tcm.main.settings.property_3.value_1"), TCMComponent.translatable("gui.tcm.main.settings.property_3.value_2"), TCMComponent.translatable("gui.tcm.main.settings.property_3.value_3")}, switch (Config.INSTANCE.ringLoadingAnimation) {
             case "style1" -> {
                 yield 1;
             }
@@ -195,10 +204,28 @@ public class TCMMainScreenPages {
         return temp;
     }
 
-    public static AbstractWidget[] getPropertyButton(int x, int y, int width, Component text, Component description, Component[] selects, int index, BiConsumer<Integer, Button> onPress) {
+    public AbstractWidget[] getPropertyComboBox(int x, int y, int width, Component text, Component description, Component[] selects, int index, BiConsumer<Integer, AbstractButton> onPress) {
+        var box = new ComboBox(x + width - 80, y, 80, 20, List.of(selects), Math.min(index, selects.length - 1), screen::renderLastest);
+        box.onValueChanged((j) -> {
+            onPress.accept(j, box);
+        });
+        return new AbstractWidget[]{new TextWidget(x, y - 2, width - 60, 10, Minecraft.getInstance().font, text), new TextWidget(x, y + 20 - 8, width - 60, 10, Minecraft.getInstance().font, description.copy().withStyle(Style.EMPTY.withColor(0xBDBDBD))),
+                box};
+    }
+
+    public AbstractWidget[] getPropertyComboBox(AtomicInteger input, int x, int y, int width, Component text, Component description, Component[] selects, int index, BiConsumer<Integer, AbstractButton> onPress) {
+        AbstractWidget[] temp = getPropertyComboBox(x, y, width, text, description, selects, index, onPress);
+        if (temp.length < 3) {
+            throw new RuntimeException("Array length is too short.");
+        }
+        input.addAndGet(temp[1].getY() - temp[0].getY() + 26);
+        return temp;
+    }
+
+    public static AbstractWidget[] getPropertyButton(int x, int y, int width, Component text, Component description, Component[] selects, int index, BiConsumer<Integer, AbstractButton> onPress) {
         AtomicInteger i = new AtomicInteger(Math.min(index, selects.length - 1));
 
-        return new AbstractWidget[]{new TextWidget(x, y - 2, width - 60, 10, Minecraft.getInstance().font, text), new TextWidget(x, y + 20 - 8, width - 60, 10, Minecraft.getInstance().font, description.copy().withStyle(Style.EMPTY.withColor(0xBDBDBD))), new MetroButton(x + width - 60, y, 60, 20, selects[i.get()], (button) -> {
+        return new AbstractWidget[]{new TextWidget(x, y - 2, width - 60, 10, Minecraft.getInstance().font, text), new TextWidget(x, y + 20 - 8, width - 60, 10, Minecraft.getInstance().font, description.copy().withStyle(Style.EMPTY.withColor(0xBDBDBD))), new FlueroButton(x + width - 60, y, 60, 20, selects[i.get()], (button) -> {
             if (i.get() >= selects.length - 1) {
                 i.set(0);
             } else {
@@ -216,7 +243,7 @@ public class TCMMainScreenPages {
         })};
     }
 
-        public static AbstractWidget[] getPropertyButton(AtomicInteger input, int x, int y, int width, Component text, Component description, Component[] selects, int index, BiConsumer<Integer, Button> onPress) {
+    public static AbstractWidget[] getPropertyButton(AtomicInteger input, int x, int y, int width, Component text, Component description, Component[] selects, int index, BiConsumer<Integer, AbstractButton> onPress) {
         AbstractWidget[] temp = getPropertyButton(x, y, width, text, description, selects, index, onPress);
         if (temp.length < 3) {
             throw new RuntimeException("Array length is too short.");

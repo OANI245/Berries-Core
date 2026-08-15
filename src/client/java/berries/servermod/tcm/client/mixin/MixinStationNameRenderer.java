@@ -3,7 +3,7 @@ package berries.servermod.tcm.client.mixin;
 import berries.servermod.tcm.block.MixinStates;
 import berries.servermod.tcm.block.blockentity.MixinBlockEntityHelper;
 import berries.servermod.tcm.client.data.TCMDynamicResourceCacheV2;
-import kotlin.text.Regex;
+import berries.servermod.tcm.client.util.TextUtil;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.server.level.ServerPlayer;
@@ -32,6 +32,7 @@ import org.mtr.mod.data.IGui;
 import org.mtr.mod.generated.lang.TranslationProvider;
 import org.mtr.mod.render.*;
 import org.mtr.mod.screen.DashboardListItem;
+import org.mtr.mod.screen.EditStationScreen;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -74,70 +75,20 @@ public abstract class MixinStationNameRenderer<T extends BlockStationNameBase.Bl
         });
 
         final Station station = InitClient.findStation(pos);
-        List<String> lineNames = new ArrayList<>();
-        List<Integer> lineColors = new ArrayList<>();
-        String selectedExit = "";
+        long selectedExit = 0;
         if (station != null) {
-            final ObjectArraySet<Station> connectingStationsIncludingThisOne = new ObjectArraySet<>(station.connectedStations);
-            connectingStationsIncludingThisOne.add(station);
-
-            final LongAVLTreeSet platformIds = new LongAVLTreeSet();
-            connectingStationsIncludingThisOne.forEach(connectingStation -> connectingStation.savedRails.forEach(platform -> platformIds.add(platform.getId())));
-            final IntAVLTreeSet addedColors = new IntAVLTreeSet();
-            long hash = MinecraftClientData.getInstance().simplifiedRoutes.hashCode();
-            MinecraftClientData.getInstance().simplifiedRoutes
-                    .stream().sorted((r1, r2) -> {
-                        String s1 = r1.getName();
-                        String s2 = r2.getName();
-                        if (s1.matches("\\d+.+") && s2.matches("\\d+.+")) {
-                            try {
-                                return Integer.decode(
-                                        s1.replaceAll(Regex.Companion.escape(
-                                                s1.replaceFirst("\\d+", "")
-                                        ), "")) - Integer.decode(
-                                        s2.replaceAll(Regex.Companion.escape(
-                                                s2.replaceFirst("\\d+", "")
-                                        ), ""));
-                            } catch (NumberFormatException e) {
-                                return 0;
-                            }
-                        } else if (s2.matches("\\d+.+")) {
-                            return 0;
-                        } else if (s1.matches("\\d+.+")) {
-                            return 1;
-                        }
-                        return 0;
-                    }).forEach(simplifiedRoute -> {
-                        final int rcolor = simplifiedRoute.getColor();
-                        if (!addedColors.contains(rcolor) && simplifiedRoute.getPlatforms().stream().anyMatch(simplifiedRoutePlatform -> platformIds.contains(simplifiedRoutePlatform.getPlatformId()))) {
-                            lineNames.add(simplifiedRoute.getName());
-                            lineColors.add(simplifiedRoute.getColor());
-                            addedColors.add(rcolor);
-                        }
-                    });
-
-            final ObjectArrayList<StationExit> exits = station.getExits();
-
-            Map<Long, String> exitNamesMap = new HashMap<>();
-            exits.forEach(stationExit ->
-                    exitNamesMap.put(serializeExit(stationExit.getName()), stationExit.getName()));
             try {
-                long selectedId =
+                selectedExit =
                         Optional.ofNullable(MixinBlockEntityHelper.invokeGetMethodInBlockEntity(entity, "getSelectedExitZone", Long.TYPE))
                                 .orElse(0L);
-                String str = exitNamesMap.get(selectedId);
-                if (exitNamesMap.containsKey(selectedId)) {
-                    selectedExit = str;
-                }
             } catch (Exception e) {
                 System.out.println(e.getMessage());
             }
         }
 
-        String exitZoneName = selectedExit;
-        String left = exitZoneName.replaceAll("\\d+$", ""),
+        /*String left = exitZoneName.replaceAll("\\d+$", ""),
                 right = exitZoneName.replaceAll("^" + left, "");
-        String[] exitZone = !exitZoneName.isEmpty() ? new String[]{left, right} : new String[]{null, null};
+        String[] exitZone = !exitZoneName.isEmpty() ? new String[]{left, right} : new String[]{null, null};*/
 
         for (int i = 0; i < (entity.isDoubleSided ? 2 : 1); i++) {
             final StoredMatrixTransformations storedMatrixTransformations2 = storedMatrixTransformations.copy();
@@ -148,12 +99,12 @@ public abstract class MixinStationNameRenderer<T extends BlockStationNameBase.Bl
                 }
                 graphicsHolderNew.translate(0, 0, 0.5 - entity.zOffset - SMALL_OFFSET);
             });
-            drawStationName(world, pos, state, facing, storedMatrixTransformations2, station == null ? TranslationProvider.GUI_MTR_UNTITLED.getString() : station.getName(), station == null ? 0 : station.getColor(), color, light, lineNames, lineColors, lineColors.size(), exitZone);
+            drawStationName(world, pos, state, facing, storedMatrixTransformations2, station == null ? TranslationProvider.GUI_MTR_UNTITLED.getString() : station.getName(), station == null ? 0 : station.getColor(), color, light, station == null ? 0 : station.getId(), selectedExit);
         }
     }
 
     @Unique
-    protected void drawStationName(World world, BlockPos pos, BlockState state, Direction facing, StoredMatrixTransformations storedMatrixTransformations, String stationName, int stationColor, int color, int light, List<String> lineNames, List<Integer> lineColors, int lineNamesLength, String[] exitZone) {
+    protected void drawStationName(World world, BlockPos pos, BlockState state, Direction facing, StoredMatrixTransformations storedMatrixTransformations, String stationName, int stationColor, int color, int light, long stationId, long selectedExit) {
         final int lengthLeft = getLength(world, pos, false);
         final int lengthRight = getLength(world, pos, true);
 
@@ -171,9 +122,9 @@ public abstract class MixinStationNameRenderer<T extends BlockStationNameBase.Bl
                                     .identifier :
                             TCMDynamicResourceCacheV2.instance.getStationNameEntrance(
                                     propagateProperty < 2 || propagateProperty >= 4 ? ARGB_WHITE : ARGB_BLACK,
-                                    IGui.insertTranslation(TranslationProvider.GUI_MTR_STATION_CJK,
+                                    TextUtil.getCjkParts(stationName).endsWith("站") || TextUtil.getNonCjkParts(stationName).endsWith("Station") ? stationName : IGui.insertTranslation(TranslationProvider.GUI_MTR_STATION_CJK,
                                             TranslationProvider.GUI_MTR_STATION, 1, stationName),
-                                    totalLength / logoSize, lineNames.toArray(new String[0]), lineColors.toArray(new Integer[0]), lineNamesLength, exitZone).identifier
+                                    totalLength / logoSize, stationId, selectedExit).identifier
                     , false, QueuedRenderLayer.INTERIOR, (graphicsHolder, offset) -> {
                         storedMatrixTransformations.transform(graphicsHolder, offset);
                         IDrawing.drawTexture(graphicsHolder, -0.5F, -logoSize / 2, 1, logoSize, (float) (lengthLeft - 1) / totalLength, 0, (float) lengthLeft / totalLength, 1, facing, color, light);

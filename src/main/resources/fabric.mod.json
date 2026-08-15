@@ -3,7 +3,7 @@
   "id": "tcm",
   "version": "${version}",
   "name": "Tiancheng Client Mod",
-  "description": "Tiancheng Official Mod.",
+  "description": "天城城市建设存档官方制作的一款多功能模组。本模组添加了北京地铁样式的屏蔽门吊板、带线路号的站名入口标志，以及冒险模式、服务器游玩时的实用功能。",
   "authors": ["OANI245", "花海"],
   "contact": {},
   "icon": "assets/tcm/icon.png",
@@ -33,7 +33,7 @@
     "java": ">=21",
     "fabricloader": ">=${loader_version}",
     "fabric": "*",
-    "mtr": "*",
+    "mtr": ">=4.0.4 <4.1.0",
 	"modernui": ">=3.12.0.1",
     "minecraft": "${minecraft_version}"
   }

@@ -7,6 +7,13 @@
 			"oversample": 6.0,
             "shift": [0, 1.5]
 		},
+		{
+			"type": "ttf",
+			"file": "tcm:vgac.ttf",
+			"size": 10.0,
+			"oversample": 6.0,
+			"shift": [0, 1.5]
+		},
         {
 			"type": "legacy_unicode",
 			"sizes": "minecraft:font/glyph_sizes.bin",

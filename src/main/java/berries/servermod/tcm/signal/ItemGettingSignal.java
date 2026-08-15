@@ -12,7 +12,7 @@ import org.apache.logging.log4j.core.config.builder.impl.BuiltConfiguration;
 public enum ItemGettingSignal {
     ELYTRA(BuiltInRegistries.ITEM.getKey(Items.ELYTRA)),
     FIREWORK_ROCKET(BuiltInRegistries.ITEM.getKey(Items.FIREWORK_ROCKET)),
-    EMERALD(BuiltInRegistries.ITEM.getKey(Items.EMERALD));
+    POUND_100(BuiltInRegistries.ITEM.getKey(berries.servermod.tcm.item.Items.StaticFields.POUND_100));
 
     private final ResourceLocation location; //物品id
 

@@ -1,64 +1,604 @@
 {
-  "custom_trains": {
-    "trm01": {
-      "name": "TRM01型地铁列车组",
-      "description": "编组方式（6节）：TK04-TK01-TK02-TK03-TK01-TK04",
-      "wikipedia_article": "",
-      "color": "B32424",
-      "gangway_connection_id": "mtr:textures/entity/s_train",
-      "train_barrier_id": "",
-      "door_animation_type": "STANDARD",
-      "render_door_overlay": false,
-      "rider_offset": 0.0,
-      "texture_id": "mtr:train/trm01/trm01",
-      "model": "mtr:train/trm01/trm01.bbmodel",
-      "model_properties": "mtr:train/trm01/trm01.json",
-      "script_texts": ["const TRAIN_NAME = 'trm01';"],
-      "script_files": ["mtr:ntejs/door/kn.js", "mtr:ntejs/trm01/main.js", "mtr:tclcd/trm01_main.js"],
-      "speed_sound_count": 55,
-      "door_close_sound_time": 1.0,
-      "door_sound_base_id": "trm01k",
-      "speed_sound_base_id": "c1141a"
+  "vehicles": [
+    {
+      "id": "tk01",
+      "name": "TRM01-TK01（前）",
+      "color": "CC0000",
+      "procIds": ["trm01_kndoor", "trm01_main", "trm01_lcd"],
+      "transportMode": "TRAIN",
+      "length": 25.0,
+      "width": 2.0,
+      "bogie1Position": -8.5,
+      "bogie2Position": 8.5,
+      "couplingPadding1": 0.0,
+      "couplingPadding2": 0.0,
+      "description": "TRM01是天城公司制造的首款列车，运营于天城轨道交通2号线，制造于2025年。\n列车编组6节：TK01-TK04-TK02-TK03-TK04-TK01",
+      "wikipediaArticle": "",
+      "tags": [],
+      "models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01.obj",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_fcdd1b16.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_770cbd77.json",
+          "flipTextureV": true
+        },
+        {
+          "modelResource": "mtr:train/trm01/trm01_floor_doorways.bbmodel",
+          "textureResource": "",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_95d677f7.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_8ccac563.json",
+          "flipTextureV": true
+        }
+      ],
+      "bogie1Models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01_bogie.bbmodel",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_0bogie.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_0bogie.json",
+          "flipTextureV": true
+        }
+      ],
+      "bogie2Models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01_bogie.bbmodel",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_0bogie.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_0bogie.json",
+          "flipTextureV": true
+        }
+      ],
+      "hasGangway1": false,
+      "hasGangway2": true,
+      "hasBarrier1": false,
+      "hasBarrier2": false,
+      "legacyRiderOffset": 0.0,
+      "bveSoundBaseResource": "",
+      "legacySpeedSoundBaseResource": "c1141a",
+      "legacySpeedSoundCount": 120,
+      "legacyUseAccelerationSoundsWhenCoasting": false,
+      "legacyConstantPlaybackSpeed": false,
+      "legacyDoorSoundBaseResource": "trm01k",
+      "legacyDoorCloseSoundTime": 1.0
     },
-    "trm02": {
-      "name": "TRM02型地铁列车组",
-      "description": "编组方式（4节）：TK08-TK05-TK06-TK07",
-      "wikipedia_article": "",
-      "color": "FD822A",
-      "gangway_connection_id": "mtr:textures/entity/s_train",
-      "train_barrier_id": "",
-      "door_animation_type": "STANDARD",
-      "render_door_overlay": false,
-      "rider_offset": 0.0,
-      "texture_id": "mtr:train/trm02/trm02",
-      "model": "mtr:train/trm01/trm01.bbmodel",
-      "model_properties": "mtr:train/trm01/trm02.json",
-      "script_texts": ["const TRAIN_NAME = 'trm01'; const TEXTURE = 'mtr:train/trm02/trm02.png'; "],
-      "script_files": ["mtr:ntejs/door/kn.js", "mtr:ntejs/trm01/main.js", "mtr:tclcd/trm01_main.js"],
-      "speed_sound_count": 55,
-      "door_close_sound_time": 1.0,
-      "door_sound_base_id": "trm01",
-      "speed_sound_base_id": "c1141a"
+    {
+      "id": "tk08",
+      "name": "TRM02-TK08",
+      "color": "FFA200",
+      "procIds": ["trm02_kndoor", "trm02_main"],
+      "transportMode": "TRAIN",
+      "length": 25.0,
+      "width": 2.0,
+      "bogie1Position": -8.5,
+      "bogie2Position": 8.5,
+      "couplingPadding1": 0.0,
+      "couplingPadding2": 0.0,
+      "description": "TRM02是天城公司制造的列车，运营于天城轨道交通1号线，制造于2025年。\n列车编组4节：TK08-TK05-TK06-TK07",
+      "wikipediaArticle": "",
+      "tags": [],
+      "models": [
+        {
+          "modelResource": "mtr:train/trm02/trm02.obj",
+          "textureResource": "mtr:train/trm02/trm02.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_f30da0bd.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_f02244fd.json",
+          "flipTextureV": true
+        },
+        {
+          "modelResource": "mtr:train/trm01/trm01_floor_doorways.bbmodel",
+          "textureResource": "",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_369f24ac.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_b3b49ad9.json",
+          "flipTextureV": true
+        }
+      ],
+      "bogie1Models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01_bogie.bbmodel",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_0bogie.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_0bogie.json",
+          "flipTextureV": true
+        }
+      ],
+      "bogie2Models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01_bogie.bbmodel",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_0bogie.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_0bogie.json",
+          "flipTextureV": true
+        }
+      ],
+      "hasGangway1": false,
+      "hasGangway2": true,
+      "hasBarrier1": false,
+      "hasBarrier2": false,
+      "legacyRiderOffset": 0.0,
+      "bveSoundBaseResource": "",
+      "legacySpeedSoundBaseResource": "c1141a",
+      "legacySpeedSoundCount": 120,
+      "legacyUseAccelerationSoundsWhenCoasting": false,
+      "legacyConstantPlaybackSpeed": false,
+      "legacyDoorSoundBaseResource": "trm01",
+      "legacyDoorCloseSoundTime": 1.0
     },
-    "trm02_zl1": {
-      "name": "TRM02型地铁列车组（专列1）",
-      "description": "编组方式（4节）：TK08-TK05-TK06-TK07",
-      "wikipedia_article": "",
-      "color": "1E548E",
-      "gangway_connection_id": "mtr:textures/entity/s_train",
-      "train_barrier_id": "",
-      "door_animation_type": "STANDARD",
-      "render_door_overlay": false,
-      "rider_offset": 0.0,
-      "texture_id": "mtr:train/trm02/trm02_zl1",
-      "model": "mtr:train/trm01/trm01.bbmodel",
-      "model_properties": "mtr:train/trm01/trm02.json",
-      "script_texts": ["const TRAIN_NAME = 'trm01'; const TEXTURE = 'mtr:train/trm02/trm02_zl1.png'; "],
-      "script_files": ["mtr:ntejs/door/kn.js", "mtr:ntejs/trm01/main.js", "mtr:tclcd/trm01_main.js"],
-      "speed_sound_count": 55,
-      "door_close_sound_time": 1.0,
-      "door_sound_base_id": "trm01",
-      "speed_sound_base_id": "c1141a"
+    {
+      "id": "tk01f",
+      "name": "TRM01-TK01（后）",
+      "color": "CC0000",
+      "procIds": ["trm01_kndoor", "trm01_main", "trm01_lcd"],
+      "transportMode": "TRAIN",
+      "length": 25.0,
+      "width": 2.0,
+      "bogie1Position": -8.5,
+      "bogie2Position": 8.5,
+      "couplingPadding1": 0.0,
+      "couplingPadding2": 0.0,
+      "description": "TRM01是天城公司制造的首款列车，运营于天城轨道交通2号线，制造于2025年。\n列车编组6节：TK01-TK04-TK02-TK03-TK04-TK01",
+      "wikipediaArticle": "",
+      "tags": [],
+      "models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01.obj",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_ecb73290.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_d619a6a0.json",
+          "flipTextureV": true
+        },
+        {
+          "modelResource": "mtr:train/trm01/trm01_floor_doorways.bbmodel",
+          "textureResource": "",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_9a83e8f6.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_1cac13ea.json",
+          "flipTextureV": true
+        }
+      ],
+      "bogie1Models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01_bogie.bbmodel",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_0bogie.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_0bogie.json",
+          "flipTextureV": true
+        }
+      ],
+      "bogie2Models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01_bogie.bbmodel",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_0bogie.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_0bogie.json",
+          "flipTextureV": true
+        }
+      ],
+      "hasGangway1": true,
+      "hasGangway2": false,
+      "hasBarrier1": false,
+      "hasBarrier2": false,
+      "legacyRiderOffset": 0.0,
+      "bveSoundBaseResource": "",
+      "legacySpeedSoundBaseResource": "c1141a",
+      "legacySpeedSoundCount": 120,
+      "legacyUseAccelerationSoundsWhenCoasting": false,
+      "legacyConstantPlaybackSpeed": false,
+      "legacyDoorSoundBaseResource": "trm01k",
+      "legacyDoorCloseSoundTime": 1.0
+    },
+    {
+      "id": "tk07",
+      "name": "TRM02-TK07",
+      "color": "FFA200",
+      "procIds": ["trm02_kndoor", "trm02_main"],
+      "transportMode": "TRAIN",
+      "length": 25.0,
+      "width": 2.0,
+      "bogie1Position": -8.5,
+      "bogie2Position": 8.5,
+      "couplingPadding1": 0.0,
+      "couplingPadding2": 0.0,
+      "description": "TRM02是天城公司制造的列车，运营于天城轨道交通1号线，制造于2025年。\n列车编组4节：TK08-TK05-TK06-TK07",
+      "wikipediaArticle": "",
+      "tags": [],
+      "models": [
+        {
+          "modelResource": "mtr:train/trm02/trm02.obj",
+          "textureResource": "mtr:train/trm02/trm02.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_8295a9a9.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_a0d41a93.json",
+          "flipTextureV": true
+        },
+        {
+          "modelResource": "mtr:train/trm01/trm01_floor_doorways.bbmodel",
+          "textureResource": "",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_3a9bf5b4.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_29e65d9f.json",
+          "flipTextureV": true
+        }
+      ],
+      "bogie1Models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01_bogie.bbmodel",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_0bogie.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_0bogie.json",
+          "flipTextureV": true
+        }
+      ],
+      "bogie2Models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01_bogie.bbmodel",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_0bogie.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_0bogie.json",
+          "flipTextureV": true
+        }
+      ],
+      "hasGangway1": true,
+      "hasGangway2": false,
+      "hasBarrier1": false,
+      "hasBarrier2": false,
+      "legacyRiderOffset": 0.0,
+      "bveSoundBaseResource": "",
+      "legacySpeedSoundBaseResource": "c1141a",
+      "legacySpeedSoundCount": 120,
+      "legacyUseAccelerationSoundsWhenCoasting": false,
+      "legacyConstantPlaybackSpeed": false,
+      "legacyDoorSoundBaseResource": "trm01",
+      "legacyDoorCloseSoundTime": 1.0
+    },
+    {
+      "id": "tk04",
+      "name": "TRM01-TK04",
+      "color": "CC0000",
+      "procIds": ["trm01_kndoor", "trm01_main", "trm01_lcd"],
+      "transportMode": "TRAIN",
+      "length": 25.0,
+      "width": 2.0,
+      "bogie1Position": -8.5,
+      "bogie2Position": 8.5,
+      "couplingPadding1": 0.0,
+      "couplingPadding2": 0.0,
+      "description": "TRM01是天城公司制造的首款列车，运营于天城轨道交通2号线，制造于2025年。\n列车编组6节：TK01-TK04-TK02-TK03-TK04-TK01",
+      "wikipediaArticle": "",
+      "tags": [],
+      "models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01.obj",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_713bca90.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_30c445a1.json",
+          "flipTextureV": true
+        },
+        {
+          "modelResource": "mtr:train/trm01/trm01_floor_doorways.bbmodel",
+          "textureResource": "",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_3743e54c.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_62d2dbdb.json",
+          "flipTextureV": true
+        }
+      ],
+      "bogie1Models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01_bogie.bbmodel",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_0bogie.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_0bogie.json",
+          "flipTextureV": true
+        }
+      ],
+      "bogie2Models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01_bogie.bbmodel",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_0bogie.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_0bogie.json",
+          "flipTextureV": true
+        }
+      ],
+      "hasGangway1": true,
+      "hasGangway2": true,
+      "hasBarrier1": false,
+      "hasBarrier2": false,
+      "legacyRiderOffset": 0.0,
+      "bveSoundBaseResource": "",
+      "legacySpeedSoundBaseResource": "c1141a",
+      "legacySpeedSoundCount": 120,
+      "legacyUseAccelerationSoundsWhenCoasting": false,
+      "legacyConstantPlaybackSpeed": false,
+      "legacyDoorSoundBaseResource": "trm01k",
+      "legacyDoorCloseSoundTime": 1.0
+    },
+    {
+      "id": "tk02",
+      "name": "TRM01-TK02",
+      "color": "CC0000",
+      "procIds": ["trm01_kndoor", "trm01_main", "trm01_lcd"],
+      "transportMode": "TRAIN",
+      "length": 25.0,
+      "width": 2.0,
+      "bogie1Position": -8.5,
+      "bogie2Position": 8.5,
+      "couplingPadding1": 0.0,
+      "couplingPadding2": 0.0,
+      "description": "TRM01是天城公司制造的首款列车，运营于天城轨道交通2号线，制造于2025年。\n列车编组6节：TK01-TK04-TK02-TK03-TK04-TK01",
+      "wikipediaArticle": "",
+      "tags": [],
+      "models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01.obj",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_e8740af0.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_949479cf.json",
+          "flipTextureV": true
+        },
+        {
+          "modelResource": "mtr:train/trm01/trm01_floor_doorways.bbmodel",
+          "textureResource": "",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_b2940f69.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_c889478b.json",
+          "flipTextureV": true
+        }
+      ],
+      "bogie1Models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01_bogie.bbmodel",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_0bogie.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_0bogie.json",
+          "flipTextureV": true
+        }
+      ],
+      "bogie2Models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01_bogie.bbmodel",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_0bogie.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_0bogie.json",
+          "flipTextureV": true
+        }
+      ],
+      "hasGangway1": true,
+      "hasGangway2": true,
+      "hasBarrier1": false,
+      "hasBarrier2": false,
+      "legacyRiderOffset": 0.0,
+      "bveSoundBaseResource": "",
+      "legacySpeedSoundBaseResource": "c1141a",
+      "legacySpeedSoundCount": 120,
+      "legacyUseAccelerationSoundsWhenCoasting": false,
+      "legacyConstantPlaybackSpeed": false,
+      "legacyDoorSoundBaseResource": "trm01k",
+      "legacyDoorCloseSoundTime": 1.0
+    },
+    {
+      "id": "tk06",
+      "name": "TRM02-TK06",
+      "color": "FFA200",
+      "procIds": ["trm02_kndoor", "trm02_main"],
+      "transportMode": "TRAIN",
+      "length": 25.0,
+      "width": 2.0,
+      "bogie1Position": -8.5,
+      "bogie2Position": 8.5,
+      "couplingPadding1": 0.0,
+      "couplingPadding2": 0.0,
+      "description": "TRM02是天城公司制造的列车，运营于天城轨道交通1号线，制造于2025年。\n列车编组4节：TK08-TK05-TK06-TK07",
+      "wikipediaArticle": "",
+      "tags": [],
+      "models": [
+        {
+          "modelResource": "mtr:train/trm02/trm02.obj",
+          "textureResource": "mtr:train/trm02/trm02.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_b2bdebe3.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_332f7f34.json",
+          "flipTextureV": true
+        },
+        {
+          "modelResource": "mtr:train/trm01/trm01_floor_doorways.bbmodel",
+          "textureResource": "",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_59fbb56e.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_d58c98d1.json",
+          "flipTextureV": true
+        }
+      ],
+      "bogie1Models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01_bogie.bbmodel",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_0bogie.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_0bogie.json",
+          "flipTextureV": true
+        }
+      ],
+      "bogie2Models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01_bogie.bbmodel",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_0bogie.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_0bogie.json",
+          "flipTextureV": true
+        }
+      ],
+      "hasGangway1": true,
+      "hasGangway2": true,
+      "hasBarrier1": false,
+      "hasBarrier2": false,
+      "legacyRiderOffset": 0.0,
+      "bveSoundBaseResource": "",
+      "legacySpeedSoundBaseResource": "c1141a",
+      "legacySpeedSoundCount": 120,
+      "legacyUseAccelerationSoundsWhenCoasting": false,
+      "legacyConstantPlaybackSpeed": false,
+      "legacyDoorSoundBaseResource": "trm01",
+      "legacyDoorCloseSoundTime": 1.0
+    },
+    {
+      "id": "tk03",
+      "name": "TRM01-TK03",
+      "color": "CC0000",
+      "procIds": ["trm01_kndoor", "trm01_main", "trm01_lcd"],
+      "transportMode": "TRAIN",
+      "length": 25.0,
+      "width": 2.0,
+      "bogie1Position": -8.5,
+      "bogie2Position": 8.5,
+      "couplingPadding1": 0.0,
+      "couplingPadding2": 0.0,
+      "description": "TRM01是天城公司制造的首款列车，运营于天城轨道交通2号线，制造于2025年。\n列车编组6节：TK01-TK04-TK02-TK03-TK04-TK01",
+      "wikipediaArticle": "",
+      "tags": [],
+      "models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01.obj",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_9e09e5eb.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_14d67eec.json",
+          "flipTextureV": true
+        },
+        {
+          "modelResource": "mtr:train/trm01/trm01_floor_doorways.bbmodel",
+          "textureResource": "",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_59710b4a.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_9ff0221e.json",
+          "flipTextureV": true
+        }
+      ],
+      "bogie1Models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01_bogie.bbmodel",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_0bogie.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_0bogie.json",
+          "flipTextureV": true
+        }
+      ],
+      "bogie2Models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01_bogie.bbmodel",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_0bogie.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_0bogie.json",
+          "flipTextureV": true
+        }
+      ],
+      "hasGangway1": true,
+      "hasGangway2": true,
+      "hasBarrier1": false,
+      "hasBarrier2": false,
+      "legacyRiderOffset": 0.0,
+      "bveSoundBaseResource": "",
+      "legacySpeedSoundBaseResource": "c1141a",
+      "legacySpeedSoundCount": 120,
+      "legacyUseAccelerationSoundsWhenCoasting": false,
+      "legacyConstantPlaybackSpeed": false,
+      "legacyDoorSoundBaseResource": "trm01k",
+      "legacyDoorCloseSoundTime": 1.0
+    },
+    {
+      "id": "tk05",
+      "name": "TRM02-TK05",
+      "color": "FFA200",
+      "procIds": ["trm02_kndoor", "trm02_main"],
+      "transportMode": "TRAIN",
+      "length": 25.0,
+      "width": 2.0,
+      "bogie1Position": -8.5,
+      "bogie2Position": 8.5,
+      "couplingPadding1": 0.0,
+      "couplingPadding2": 0.0,
+      "description": "TRM02是天城公司制造的列车，运营于天城轨道交通1号线，制造于2025年。\n列车编组4节：TK08-TK05-TK06-TK07",
+      "wikipediaArticle": "",
+      "tags": [],
+      "models": [
+        {
+          "modelResource": "mtr:train/trm02/trm02.obj",
+          "textureResource": "mtr:train/trm02/trm02.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_219b3d97.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_817f3238.json",
+          "flipTextureV": true
+        },
+        {
+          "modelResource": "mtr:train/trm01/trm01_floor_doorways.bbmodel",
+          "textureResource": "",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_fa4656c9.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_d889d256.json",
+          "flipTextureV": true
+        }
+      ],
+      "bogie1Models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01_bogie.bbmodel",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_0bogie.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_0bogie.json",
+          "flipTextureV": true
+        }
+      ],
+      "bogie2Models": [
+        {
+          "modelResource": "mtr:train/trm01/trm01_bogie.bbmodel",
+          "textureResource": "mtr:train/trm01/trm01.png",
+          "modelPropertiesResource": "mtr:train/1a2properties/properties_0bogie.json",
+          "positionDefinitionsResource": "mtr:train/1a2properties/definition_0bogie.json",
+          "flipTextureV": true
+        }
+      ],
+      "hasGangway1": true,
+      "hasGangway2": true,
+      "hasBarrier1": false,
+      "hasBarrier2": false,
+      "legacyRiderOffset": 0.0,
+      "bveSoundBaseResource": "",
+      "legacySpeedSoundBaseResource": "c1141a",
+      "legacySpeedSoundCount": 120,
+      "legacyUseAccelerationSoundsWhenCoasting": false,
+      "legacyConstantPlaybackSpeed": false,
+      "legacyDoorSoundBaseResource": "trm01",
+      "legacyDoorCloseSoundTime": 1.0
     }
-  }
+  ],
+  "vehicleProcessors": [
+    {
+      "id": "trm01_kndoor",
+      "proc": "kn_door",
+      "input": {
+        "door_model": "mtr:train/trm01/trm01_doors.obj",
+        "door_relative_x": 0.812
+      }
+    },
+    {
+      "id": "trm01_main",
+      "proc": "trm01_main",
+      "input": {}
+    },
+    {
+      "id": "trm02_kndoor",
+      "proc": "kn_door",
+      "input": {
+        "door_model": "mtr:train/trm02/trm02_doors.obj",
+        "door_relative_x": 0.812
+      }
+    },
+    {
+      "id": "trm02_main",
+      "proc": "trm02_main",
+      "input": {}
+    },
+    {
+      "id": "trm01_lcd",
+      "proc": "tc_general_lcd",
+      "input": {
+        "screen_model_location": "mtr:train/trm01/trm01_lcd_screens.obj",
+        "lcd_width": 2048,
+        "lcd_height": 384,
+        "texture_dia": 2048
+      }
+    }
+  ],
+  "signs": [],
+  "rails": [],
+  "objects": [],
+  "lifts": []
 }

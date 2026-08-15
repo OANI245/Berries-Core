@@ -25,10 +25,7 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-
-import static berries.servermod.tcm.block.MixinStates.BEIJING_STYLE;
+import static berries.servermod.tcm.block.MixinStates.PSD_TOP_CONTENT_STYLE;
 import static berries.servermod.tcm.block.MixinStates.PSD_TOP_DISPLAY_TYPE;
 import static org.mtr.mod.data.IGui.ARGB_BLACK;
 import static org.mtr.mod.data.IGui.ARGB_WHITE;
@@ -57,7 +54,7 @@ public abstract class MixinRenderRouteBase<T extends BlockPSDTop.BlockEntityBase
     }
 
     @Override
-    public final void render(T entity, float tickDelta, @NotNull GraphicsHolder graphicsHolder, int light, int overlay) {
+    public final void render(@NotNull T entity, float tickDelta, @NotNull GraphicsHolder graphicsHolder, int light, int overlay) {
         if (entity instanceof BlockPSDTop.BlockEntity) {
             final World world = entity.getWorld2();
             if (world == null) {
@@ -95,9 +92,9 @@ public abstract class MixinRenderRouteBase<T extends BlockPSDTop.BlockEntityBase
 
                         final Identifier identifier;
                         if (renderType == Class.forName("org.mtr.mod.render.RenderRouteBase$RenderType").getField("ARROW").get(null)) {
-                            if (state.data.getValue(BEIJING_STYLE) != 0 && type == MixinStates.BeijingStylePSDTopType.DEFAULT) {
-                                identifier = TCMDynamicResourceCacheV2.instance.getDirectionArrow(platformId, (arrowDirection & 0b01) > 0, (arrowDirection & 0b10) > 0, IGui.HorizontalAlignment.CENTER, true, 0.25F, width / height, ARGB_WHITE, ARGB_BLACK, ARGB_WHITE, state.data.getValue(BEIJING_STYLE)).identifier;
-                            } else if (state.data.getValue(BEIJING_STYLE) != 0) {
+                            if (state.data.getValue(PSD_TOP_CONTENT_STYLE) != 0 && type == MixinStates.BeijingStylePSDTopType.DEFAULT) {
+                                identifier = TCMDynamicResourceCacheV2.instance.getDirectionArrow(platformId, (arrowDirection & 0b01) > 0, (arrowDirection & 0b10) > 0, IGui.HorizontalAlignment.CENTER, true, 0.25F, width / height, ARGB_WHITE, ARGB_BLACK, ARGB_WHITE, state.data.getValue(PSD_TOP_CONTENT_STYLE)).identifier;
+                            } else if (state.data.getValue(PSD_TOP_CONTENT_STYLE) != 0) {
                                 Station station = InitClient.findStation(blockPos);
                                 String stationName;
                                 if (station == null) {
@@ -105,14 +102,25 @@ public abstract class MixinRenderRouteBase<T extends BlockPSDTop.BlockEntityBase
                                 } else {
                                     stationName = station.getName();
                                 }
-                                identifier = TCMDynamicResourceCacheV2.instance.getPSDTopStationName(platformId, stationName, IGui.HorizontalAlignment.CENTER, true, 0.25F, width / height, ARGB_WHITE, ARGB_BLACK, ARGB_WHITE, state.data.getValue(BEIJING_STYLE)).identifier;
+                                identifier = TCMDynamicResourceCacheV2.instance.getPSDTopStationName(platformId, stationName, true, 0.25F, width / height, ARGB_WHITE, ARGB_BLACK, ARGB_WHITE, state.data.getValue(PSD_TOP_CONTENT_STYLE)).identifier;
                             } else {
                                 identifier = DynamicTextureCache.instance.getDirectionArrow(platformId, (arrowDirection & 0b01) > 0, (arrowDirection & 0b10) > 0, IGui.HorizontalAlignment.CENTER, true, 0.25F, width / height, ARGB_WHITE, ARGB_BLACK, transparentWhite ? ARGB_WHITE : 0).identifier;
                             }
                             //identifier = DynamicTextureCache.instance.getDirectionArrow(platformId, (arrowDirection & 0b01) > 0, (arrowDirection & 0b10) > 0, IGui.HorizontalAlignment.CENTER, true, 0.25F, width / height, ARGB_WHITE, ARGB_BLACK, transparentWhite ? ARGB_WHITE : 0).identifier;
                         } else {
-                            if (state.data.getValue(BEIJING_STYLE) != 0) {
-                                identifier = TCMDynamicResourceCacheV2.instance.getRouteMap(platformId, false, arrowDirection == 2, width / height, transparentWhite).identifier;
+                            if (state.data.getValue(PSD_TOP_CONTENT_STYLE) != 0 && type == MixinStates.BeijingStylePSDTopType.DEFAULT) {
+                                identifier = TCMDynamicResourceCacheV2.instance.getPSDTopRouteMap(platformId, arrowDirection == 2, width / height, transparentWhite).identifier;
+                            } else if (state.data.getValue(PSD_TOP_CONTENT_STYLE) != 0 && type == MixinStates.BeijingStylePSDTopType.ARROW) {
+                                identifier = TCMDynamicResourceCacheV2.instance.getDirectionArrow(platformId, (arrowDirection & 0b01) > 0, (arrowDirection & 0b10) > 0, IGui.HorizontalAlignment.CENTER, true, 0.25F, width / height, ARGB_WHITE, ARGB_BLACK, ARGB_WHITE, state.data.getValue(PSD_TOP_CONTENT_STYLE)).identifier;
+                            } else if (state.data.getValue(PSD_TOP_CONTENT_STYLE) != 0 && type == MixinStates.BeijingStylePSDTopType.STATION_NAME) {
+                                Station station = InitClient.findStation(blockPos);
+                                String stationName;
+                                if (station == null) {
+                                    stationName = "";
+                                } else {
+                                    stationName = station.getName();
+                                }
+                                identifier = TCMDynamicResourceCacheV2.instance.getPSDTopStationName(platformId, stationName, true, 0.25F, width / height, ARGB_WHITE, ARGB_BLACK, ARGB_WHITE, state.data.getValue(PSD_TOP_CONTENT_STYLE)).identifier;
                             } else {
                                 identifier = DynamicTextureCache.instance.getRouteMap(platformId, false, arrowDirection == 2, width / height, transparentWhite).identifier;
                             }

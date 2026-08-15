@@ -1,7 +1,8 @@
 {
-  "actionbar.tcm.psd_top.default_style": "MTR PSD Top Style",
-  "actionbar.tcm.psd_top.beijing_1": "Beijing Subway PSD Top Style 1",
-  "actionbar.tcm.psd_top.beijing_2": "Beijing Subway PSD Top Style 2",
+  "gui.tcm.psd_top.style_0": "MTR PSD Top Style",
+  "gui.tcm.psd_top.style_1": "BeijingSubway PSD Top 1",
+  "gui.tcm.psd_top.style_2": "BeijingSubway PSD Top 2",
+  "gui.tcm.psd_top.style_3": "BeijingSubway PSD Top 3",
 
   "gui.tcm.to_cjk": "开往 %s",
   "gui.tcm.to": "To %s",
@@ -30,18 +31,18 @@
   "gui.tcm.main.settings.property_3.value_1": "Disabled",
   "gui.tcm.main.settings.property_3.value_2": "Fluent",
   "gui.tcm.main.settings.property_3.value_3": "Metro",
-  "gui.tcm.version_check_disconnect.message": "Your Tiancheng Mod Version is not supported.",
+  "gui.tcm.version_check_disconnect.title": "Incompatible",
   "gui.tcm.version_check_disconnect.okButton.text": "Back",
   "gui.tcm.version_check_disconnect.dnvButton.text": "Download New Version",
   "gui.tcm.version_check_disconnect.updateButton.text": "Update (Preview)",
   "gui.tcm.version_check_disconnect.okButton.tooltip": "Only 1 min to update Tiancheng Mod.",
   "gui.tcm.version_check_disconnect.updateButton.tooltip": "Auto update is preview function, if your game cannot start after update, \nYou need to download the mod in the download webpage again.",
-  "gui.tcm.version_check_disconnect.description": "You can't join this server with Your Old Tiancheng Mod,|Your Tiancheng Mod: %s.%s.1|Suggest Tiancheng Mod: %s.%s.1|Please update Tiancheng Mod to the suggest version, and try again.",
+  "gui.tcm.version_check_disconnect.description": "Server Version %s incompatible Client Version %s|To join the server, please update your mod version to %s or later.",
 
   "gui.tcm.pay_screen.first_screen.title": "Choose way to pay",
 
-  "gui.tcm.update_dialog.title": "Update!",
-  "gui.tcm.update_dialog.content": "You are joining to the server with old Tiancheng Mod, Update to the suggest version is more stable.|Suggest version: %s.%s.1",
+  "gui.tcm.update_dialog.title": "Update Now!",
+  "gui.tcm.update_dialog.content": "The new version is available! |%s",
   "gui.tcm.update_dialog.checkBox.text": "Don't Show Again",
   "gui.tcm.update_dialog.closeButton.text": "Close",
   "gui.tcm.update_dialog.updateButton.text": "Download Update",
@@ -50,7 +51,7 @@
   "gui.tcm.output.no_updates": "Your Tiancheng Mod is the Suggest Version yet, You don't need to update it now.",
   "gui.tcm.crash.message": "Please wait",
   "gui.tcm.crash.exiting": "Minecraft is exiting...",
-  "gui.tcm.loading.reloading": "Reloading Resources",
+  "gui.tcm.loading.reloading": "Please Wait",
   "gui.tcm.prep.update.starting": "Starting Update",
   "gui.tcm.prep.update.progress": "%s%% Complete",
   "gui.tcm.prep.update.install": "Installing",
@@ -59,11 +60,23 @@
   "gui.tcm.prep.update.back_button": "Back",
   "gui.tcm.prep.update.close_button": "Close the game",
   "gui.tcm.crashed": "Game Crashed",
-  "gui.tcm.crashed.copy": "Copy StackTrack",
+  "gui.tcm.crashed.copy": "Copy Stacktrace",
+
+  "gui.tcm.edit_psd_top.nav.0": "Arrow Left",
+  "gui.tcm.edit_psd_top.nav.1": "Arrow Right",
+  "gui.tcm.edit_psd_top.nav.2": "Arrow Both",
+  "gui.tcm.edit_psd_top.nav.3": "No Arrows",
+  "gui.tcm.edit_psd_top.submitButton.text": "Submit",
+  "gui.tcm.edit_psd_top.rightbar.title": "Properties",
+  "gui.tcm.edit_psd_top.rightbar.properties.1": "PSD Top Style",
+
+  "gui.tcm.cr_ticket_barrier.platform_not_open": "The platform of this Ticket Barrier isn't open",
+  "gui.tcm.cr_ticket_barrier.locked": "Ticker Barrier is Locked",
+
   "gui.tcm.key_binding.title": "Tiancheng Mod Key Binding",
   "key.tcm.open_gui": "Open GUI Screen",
 
-  "gui.tcm.ticket_machine.top_up": "Top Up ฿%s",
+  "gui.tcm.ticket_machine.top_up": "Top Up %s Tiancheng Pounds",
 
   "gui.mtr.to": "to %s",
   "gui.mtr.to_cjk": "往%s",
@@ -73,5 +86,13 @@
   "item.tcm.pound_10": "10 Tiancheng Pounds",
   "item.tcm.pound_50": "50 Tiancheng Pounds",
   "item.tcm.pound_100": "100 Tiancheng Pounds",
-  "item.tcm.credit_card_tbb": "Credit Card (Tiancheng Business Bank)"
+  "item.tcm.credit_card_tbb": "Credit Card (Tiancheng Business Bank)",
+  "block.tcm.stations_name_info": "Stations Name & Route Info Panel",
+  "block.tcm.train_stop_position": "Train Stop Position",
+  "block.tcm.cr_ticket_barrier_entrance": "CR/CRH Ticket Barrier (Entrance, BSR Line S1)",
+  "block.tcm.cr_ticket_barrier_exit": "CR/CRH Ticket Barrier (Exit, BSR Line S1)",
+  "block.tcm.cr_ticket_barrier_bare": "CR/CRH Ticket Barrier (Bare, BSR Line S1)",
+
+  "gamerule.ticketCheckStartArrivingTime": "CR/CRH Ticket Check Start Arriving Time",
+  "gamerule.ticketCheckEndArrivingTime": "CR/CRH Ticket Check End Arriving Time"
 }

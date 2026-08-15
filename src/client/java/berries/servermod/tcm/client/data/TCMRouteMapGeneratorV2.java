@@ -1,8 +1,14 @@
 package berries.servermod.tcm.client.data;
 
+import berries.servermod.tcm.TCM;
 import berries.servermod.tcm.UFEInfo;
+import berries.servermod.tcm.client.util.TextUtil;
+import berries.servermod.tcm.client.util.texture.AWTDrawUtil;
+import berries.servermod.tcm.client.util.texture.NativeImageDrawUtil;
 import berries.servermod.tcm.util.TCMComponent;
-import kotlin.text.Regex;
+import it.unimi.dsi.fastutil.longs.LongAVLTreeSet;
+import it.unimi.dsi.fastutil.objects.ObjectArraySet;
+import it.unimi.dsi.fastutil.objects.ObjectObjectMutablePair;
 import org.jetbrains.annotations.Nullable;
 import org.mtr.core.data.*;
 import org.mtr.core.tool.Utilities;
@@ -21,15 +27,20 @@ import org.mtr.mod.Init;
 import org.mtr.mod.client.DynamicTextureCache;
 import org.mtr.mod.client.IDrawing;
 import org.mtr.mod.client.MinecraftClientData;
-import org.mtr.mod.client.RouteMapGenerator;
 import org.mtr.mod.config.Config;
 import org.mtr.mod.data.IGui;
-import org.mtr.mod.generated.lang.TranslationProvider;
+import org.mtr.mod.screen.EditStationScreen;
+import org.spongepowered.asm.mixin.Unique;
 
-import java.io.IOException;
+import java.awt.*;
+import java.awt.font.TextAttribute;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Ellipse2D;
+import java.awt.image.BufferedImage;
+import java.text.AttributedString;
 import java.util.*;
+import java.util.List;
 import java.util.function.BiConsumer;
-import java.util.regex.Pattern;
 
 import static org.mtr.mod.data.IGui.*;
 
@@ -43,6 +54,11 @@ public class TCMRouteMapGeneratorV2 {
 
     public static final int PIXEL_SCALE = 4;
     private static final int MIN_VERTICAL_SIZE = 5;
+    private static final Font FONT_CJK = AWTDrawUtil.getResourceFont("mtr:font/noto-serif-cjk-tc-semibold.ttf");
+    private static final Font FONT_CJK_LIGHT = AWTDrawUtil.getResourceFont("tcm:font/nscl.ttf");
+    private static final Font FONT_CJK_EXTRA_LIGHT = AWTDrawUtil.getResourceFont("tcm:font/nscll.ttf");
+    private static final Font FONT_ASCII = AWTDrawUtil.getResourceFont("mtr:font/noto-sans-semibold.ttf");
+    private static final Font FONT_ASCII_BOLD = AWTDrawUtil.getResourceFont("tcm:font/sab.ttf");
     private static final String LOGO_RESOURCE = "textures/block/sign/logo.png";
     private static final String EXIT_RESOURCE = "textures/block/sign/exit_letter_blank.png";
     private static final String ARROW_RESOURCE = "textures/block/sign/arrow.png";
@@ -53,6 +69,37 @@ public class TCMRouteMapGeneratorV2 {
     private static final String TEMP_CIRCULAR_MARKER_ANTICLOCKWISE = String.format("temp_circular_marker_%s_anticlockwise", Init.randomString());
     private static final String TEMP_CIRCULAR_MARKER = "temp_circular_marker";
     private static final int PIXEL_RESOLUTION = 24;
+
+    private static BufferedImage blackDirectionArrowPatternImage;
+    private static BufferedImage lightGrayTransferPatternImage;
+    private static BufferedImage blackTransferPatternImage;
+
+    static {
+        loadPatternImages();
+    }
+
+    public static void loadPatternImages() {
+        var a0tt = AWTDrawUtil.getResourceImage("mtr:" + ARROW_RESOURCE);
+        blackDirectionArrowPatternImage = new BufferedImage(a0tt.getWidth(), a0tt.getHeight(), BufferedImage.TYPE_INT_ARGB);
+        var g1 = blackDirectionArrowPatternImage.createGraphics();
+        g1.drawImage(a0tt, 0, 0, a0tt.getWidth(), a0tt.getHeight(), null);
+        g1.setComposite(AlphaComposite.SrcIn);
+        g1.setColor(Color.BLACK);
+        g1.fillRect(0, 0, blackDirectionArrowPatternImage.getWidth(), blackDirectionArrowPatternImage.getHeight());
+        g1.dispose();
+        blackDirectionArrowPatternImage.flush();
+
+        blackTransferPatternImage = AWTDrawUtil.getResourceImage(UFEInfo.MOD_ID + ":" + TRANSFER_RESOURCE);
+
+        lightGrayTransferPatternImage = new BufferedImage(blackTransferPatternImage.getWidth(), blackTransferPatternImage.getHeight(), BufferedImage.TYPE_INT_ARGB);
+        var g2 = lightGrayTransferPatternImage.createGraphics();
+        g2.drawImage(blackTransferPatternImage, 0, 0, lightGrayTransferPatternImage.getWidth(), lightGrayTransferPatternImage.getHeight(), null);
+        g2.setComposite(AlphaComposite.SrcIn);
+        g2.setColor(Color.LIGHT_GRAY);
+        g2.fillRect(0, 0, lightGrayTransferPatternImage.getWidth(), lightGrayTransferPatternImage.getHeight());
+        g2.dispose();
+        lightGrayTransferPatternImage.flush();
+    }
 
     public static void setConstants() {
         scale = (int) Math.pow(2, Config.getClient().getDynamicTextureResolution() + 5);
@@ -150,12 +197,75 @@ public class TCMRouteMapGeneratorV2 {
         return null;
     }
 
-    public static NativeImage generateStationNameEntrance(int textColor, String stationName, float aspectRatio, String[] lineNames, Integer[] lineColors, int lineNamesCount, String[] exitZone) {
+    public static NativeImage generateStationNameEntrance(int textColor, String stationName, float aspectRatio, long stationId, long selectedExit) {
         if (aspectRatio <= 0) {
             return null;
         }
 
         try {
+            var station = MinecraftClientData.getInstance().stationIdMap.get(stationId);
+            List<String> lineNames = new ArrayList<>();
+            List<Integer> lineColors = new ArrayList<>();
+            ObjectObjectMutablePair<String, String> exitZone = new ObjectObjectMutablePair<>(null, null);
+
+            if (station != null) {
+                final ObjectArraySet<Station> connectingStationsIncludingThisOne = new ObjectArraySet<>(station.connectedStations);
+                connectingStationsIncludingThisOne.add(station);
+
+                final LongAVLTreeSet platformIds = new LongAVLTreeSet();
+                connectingStationsIncludingThisOne.forEach(connectingStation -> connectingStation.savedRails.forEach(platform -> platformIds.add(platform.getId())));
+                final IntAVLTreeSet addedColors = new IntAVLTreeSet();
+                //long hash = MinecraftClientData.getInstance().simplifiedRoutes.hashCode();
+                MinecraftClientData.getInstance().simplifiedRoutes
+                        .stream().sorted((r1, r2) -> {
+                            String s1 = r1.getName();
+                            String s2 = r2.getName();
+                            if (s1.matches("\\d+.+") && s2.matches("\\d+.+")) {
+                                try {
+                                    return Integer.decode(
+                                            s1.replaceAll(
+                                                    s1.replaceFirst("\\d+", "")
+                                                    , "")) - Integer.decode(
+                                            s2.replaceAll(
+                                                    s2.replaceFirst("\\d+", "")
+                                                    , ""));
+                                } catch (NumberFormatException e) {
+                                    return 0;
+                                }
+                            } else if (s2.matches("\\d+.+")) {
+                                return 0;
+                            } else if (s1.matches("\\d+.+")) {
+                                return 1;
+                            }
+                            return 0;
+                        }).forEach(simplifiedRoute -> {
+                            final int rcolor = simplifiedRoute.getColor();
+                            if (!addedColors.contains(rcolor) && simplifiedRoute.getPlatforms().stream().anyMatch(simplifiedRoutePlatform -> platformIds.contains(simplifiedRoutePlatform.getPlatformId()))) {
+                                lineNames.add(simplifiedRoute.getName());
+                                lineColors.add(simplifiedRoute.getColor());
+                                addedColors.add(rcolor);
+                            }
+                        });
+
+                final ObjectArrayList<StationExit> exits = EditStationScreen.getStationExits(station, true);
+
+                Map<Long, String> exitNamesMap = new HashMap<>();
+                exits.forEach(stationExit ->
+                        exitNamesMap.put(serializeExit(stationExit.getName()), stationExit.getName()));
+
+                if (exitNamesMap.containsKey(selectedExit)) {
+                    String exitZoneName = exitNamesMap.get(selectedExit);
+
+                    String left = exitZoneName.replaceAll("\\d+$", ""),
+                            right = exitZoneName.replaceAll("^" + left, "");
+                    if (!exitZoneName.isEmpty()) {
+                        exitZone.left(left);
+                        exitZone.right(right);
+                    }
+                }
+            }
+            var lineNamesCount = Math.min(lineNames.size(), lineColors.size());
+
             final int size = scale * 2;
             final int width = Math.round(size * aspectRatio);
             final int padding = scale / 16;
@@ -163,13 +273,154 @@ public class TCMRouteMapGeneratorV2 {
             final int borderHeight = borderWidth / 2;
             final int tileSize = size - padding * 2;
             final int tilePadding = size / 8;
-            final int[] dimensions = new int[2];
-            final byte[] pixels = DynamicTextureCache.instance.getTextPixels(stationName, dimensions, width - size - padding, size - padding * 2, fontSizeBig * 13 / 4, fontSizeSmall * 5 / 2, padding, IGui.HorizontalAlignment.LEFT);
-            final int xOffset = (size * 6 < width || width <= size * 4) ? (width - dimensions[0] - size) / 2 : size / 2;
+            //final int[] dimensions = new int[2];
+            //final byte[] pixels = DynamicTextureCache.instance.getTextPixels(stationName, dimensions, width - size - padding, size - padding * 2, fontSizeBig * 13 / 4, fontSizeSmall * 5 / 2, padding, IGui.HorizontalAlignment.LEFT);
+            //final int xOffset = (size * 6 < width || width <= size * 4) ? (width - dimensions[0] - size) / 2 : size / 2;
             final int fakeBackgroundColor = textColor == ARGB_BLACK ? textColor + 0x010101 : 0;
 
             final NativeImage nativeImage = new NativeImage(NativeImageFormat.getAbgrMapped(), width, size, false);
             nativeImage.fillRect(0, 0, width, size, fakeBackgroundColor);
+            NativeImageDrawUtil.createDrawAndApply(nativeImage, (i, g) -> {
+                g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                var textColorAWT = new Color(textColor);
+
+                var du = new AWTDrawUtil(g);
+                //du.drawRect(0, 0, width, size, new Color(fakeBackgroundColor));
+
+                var a0s = Math.min(size * 0.95, width * 0.2);
+                var a0y = (size - a0s) / 2.0;
+                var a0t = AWTDrawUtil.getResourceImage("mtr:" + LOGO_RESOURCE);
+                if (width <= size) {
+                    g.drawImage(a0t, (int) 0, (int) 0, (int) width, (int) width, null);
+                    return;
+                }
+
+                var t0c = TextUtil.getCjkParts(stationName);
+                var t0s = size * 0.428;
+                var t0y = size * 0.1;
+                var t0f = FONT_CJK.deriveFont(Font.PLAIN, (float) t0s);
+                g.setFont(t0f);
+                var t0m = g.getFontMetrics();
+                var t0w = t0m.stringWidth(t0c);
+
+                var t1c = TextUtil.getNonCjkParts(stationName);
+                var t1s = size * 0.22;
+                var t1f = FONT_ASCII_BOLD.deriveFont(Font.PLAIN, (float) t1s);
+                g.setFont(t1f);
+                var t1w = g.getFontMetrics().stringWidth(t1c);
+
+                var atg = width * 0.04;
+                var ttg = size * 0.05;
+
+                var tmw = Math.min(t0w * 1.645, Math.min(width - atg * 2 - a0s, size * 6.0));
+                var t0mw = Math.min(t0w, tmw);
+                var t1mw = Math.min(t1w, tmw);
+
+                var t1xs = 1.0;
+                var t1t = g.getTransform();
+                if (t1w > t1mw) {
+                    t1xs = t1mw / t1w;
+                    t1t = new AffineTransform();
+                    t1t.concatenate(AffineTransform.getScaleInstance(t1xs, 1.0));
+                }
+                var t0xs = 1.0;
+                var t0t = g.getTransform();
+                if (t0w > t0mw) {
+                    t0xs = t0mw / t0w;
+                    t0t = new AffineTransform();
+                    t0t.concatenate(AffineTransform.getScaleInstance(t0xs, 1.0));
+                }
+
+                var taw = Math.max(t1w * t1xs, t0w * t0xs);
+                var gtw = a0s + atg + taw;
+                var gax = (width - gtw) / 2;
+                var tax = gax + a0s + atg;
+
+                g.drawImage(a0t, (int) gax, (int) a0y, (int) a0s, (int) a0s, null);
+                if (t1w > t1mw) du.setTransform(t1t);
+                du.drawText(t1c, (Font) null, (float) ((tax + (taw - t1w * t1xs) / 2.0) / t1xs), (float) (t0y + t0s + ttg), textColorAWT, VerticalAlignment.TOP, HorizontalAlignment.LEFT);
+                if (t1w > t1mw) du.resetTransform();
+
+                var t0ww = t1w - t1w / 6.0;
+                if (t0ww > t0w && t1xs == 1.0 && t0xs == 1.0) {
+                    g.setFont(t0f);
+                    var t0xl = tax + (taw - t0ww) / 2;
+                    var t0cc = t0c.toCharArray();
+                    if (t0cc.length == 0) {
+                        return;
+                    }
+                    var t0cw = t0m.stringWidth("口");
+                    var t0bw = t0ww - t0cw;
+                    var t0cl = t0bw / (t0cc.length - 1);
+                    for (int j = 0; j < t0cc.length; j++) {
+                        var tjx = t0xl + t0cl * j;
+                        du.drawText(String.valueOf(t0cc[j]), (Font) null, (float) tjx, (float) t0y, textColorAWT,
+                                VerticalAlignment.TOP, HorizontalAlignment.LEFT);
+                    }
+                } else {
+                    if (t0w > t0mw) du.setTransform(t0t);
+                    du.drawText(t0c, t0f, (float) ((tax + (taw - t0w * t0xs) / 2.0) / t0xs), (float) t0y, textColorAWT,
+                            VerticalAlignment.TOP, HorizontalAlignment.LEFT);
+                    if (t0w > t0mw) du.resetTransform();
+                }
+
+                if (width - gtw >= size * 2) {
+                    if (exitZone.left() != null && exitZone.right() != null) {
+                        var r0s = size * 0.55;
+                        var r0x = (size * 1.25 - r0s) / 2;
+                        var r0y = (size - r0s) / 2;
+                        du.drawBorderedRadiusRect((int) r0x, (int) r0y, (int) r0s, (int) r0s, new Color(0, 0, 0, 0), textColorAWT, size * 0.14, (int) (size * 0.032));
+
+                        var teaw = 0.0;
+                        var t2f = FONT_ASCII.deriveFont(Font.PLAIN, (float) (size * 0.45));
+                        var t3f = FONT_ASCII_BOLD.deriveFont(Font.PLAIN, (float) (size * 0.28));
+                        var t3x = 0.0;
+                        g.setFont(t2f);
+                        teaw += g.getFontMetrics().stringWidth(exitZone.left());
+                        var hasNumber = exitZone.right() != null && !(exitZone.right().isEmpty());
+                        if (hasNumber) {
+                            g.setFont(t3f);
+                            var t2t3g = size * 0.012;
+                            t3x = teaw + t2t3g;
+                            teaw += g.getFontMetrics().stringWidth(exitZone.right()) + t2t3g;
+                        }
+
+                        var teax = r0x + (r0s - teaw) / 2;
+                        var teay = r0y + r0s / 2 - size * 0.07 + t2f.getSize() / 2.0;
+                        du.drawText(exitZone.left(), (Font) t2f, (float) teax, (float) teay, textColorAWT, VerticalAlignment.BOTTOM, HorizontalAlignment.LEFT);
+                        if (hasNumber)
+                            du.drawText(exitZone.right(), t3f, (float) (teax + t3x), (float) teay, textColorAWT, VerticalAlignment.BOTTOM, HorizontalAlignment.LEFT);
+                    }
+
+                    if (lineNamesCount > 0 && width - gtw >= size * 3) {
+                        if ((width - gtw) / 2 <= size * 1.0 * lineNamesCount && lineNamesCount > 1) {
+                            var rhh = size * 1.0 / lineNamesCount;
+                            var thf = FONT_CJK.deriveFont(Font.PLAIN, (float) Math.min(size * 0.25, rhh * 0.8));
+
+                            var rhx = (int) (width - size * 1.2);
+                            var rhw = (int) (size * 1.2);
+
+                            for (int j = 0; j < lineNamesCount; j++) {
+                                var rhjy = (int) (rhh * j);
+                                var rhjc = lineColors.get(j);
+                                du.drawRect(rhx, rhjy, rhw, (int) rhh, new Color(rhjc));
+                                du.drawText(TextUtil.getCjkParts(lineNames.get(j)), thf, (float) (rhx + rhw / 2.0), (float) (rhjy + rhh / 2.0), getColorLightNess(rhjc) <= 0.67f ? Color.WHITE : Color.BLACK, VerticalAlignment.CENTER, HorizontalAlignment.CENTER);
+                            }
+                        } else {
+                            var rrp = size * 0.25;
+                            var rhcs = size * 4 / 9;
+                            var rhw = rhcs * 2.12;
+                            var rhy = size / 2;
+
+                            for (int j = lineNamesCount - 1; j >= 0; j--) {
+                                drawRouteName(du, (int) (width - rrp - (rhw * j) - rhw / 2), (int) rhy, rhcs, lineNames.get(j), new Color(lineColors.get(j)), -1, false, VerticalAlignment.CENTER, HorizontalAlignment.CENTER);
+                            }
+                        }
+                    }
+                }
+            });
+            /*nativeImage.fillRect(0, 0, width, size, fakeBackgroundColor);
             drawResource(nativeImage, LOGO_RESOURCE, xOffset, 0, size, size, false, 0, 1, 0, true);
             drawString(nativeImage, pixels, size + xOffset, size / 2, dimensions, IGui.HorizontalAlignment.LEFT, IGui.VerticalAlignment.CENTER, fakeBackgroundColor, textColor, false);
 
@@ -225,11 +476,10 @@ public class TCMRouteMapGeneratorV2 {
                     final int[] dimensionsLineName = new int[2];
                     final byte[] pixelsLineName = TCMDynamicResourceCacheV2.instance.getTextPixels(lineName, dimensionsLineName, borderWidth, (int) (tileSize * TCMDynamicResourceCacheV2.LINE_HEIGHT_MULTIPLIER), tileSize * 8 / 46, tileSize * 4 / 46, tilePadding, IGui.HorizontalAlignment.CENTER, matchesResult, size);
 
-                    //System.out.println(i); 熟悉的DEBUG环节，记得前几天线路列表一直不显示，加了这个看看原因
                     drawResource(nativeImage, UFEInfo.MOD_ID, LINE_NAME_BORDER_RESOURCE, x, y - borderHeight / 2, borderWidth, borderHeight, false, 0, 1, lineColors[i], false);
                     drawString(nativeImage, pixelsLineName, x + borderWidth / 2, y, dimensionsLineName, HorizontalAlignment.CENTER, VerticalAlignment.CENTER, 0, getColorLightNess(lineColors[i]) <= 0.67f ? ARGB_WHITE : ARGB_BLACK, false);
                 }
-            }
+            }*/
 
             clearColor(nativeImage, invertColor(fakeBackgroundColor));
 
@@ -355,94 +605,107 @@ public class TCMRouteMapGeneratorV2 {
         return null;
     }
 
-    public static NativeImage generatePSDTopStationName(long platformId, String stationName, HorizontalAlignment horizontalAlignment, boolean showToString, float paddingScale, float aspectRatio, int backgroundColor, int textColor, int transparentColor, int val) {
+    public static NativeImage generatePSDTopStationName(long platformId, String stationName, boolean showToString, float paddingScale, float aspectRatio, int backgroundColor, int textColor, int transparentColor, int val) {
         if (aspectRatio <= 0) {
             return null;
         }
 
         try {
             if (stationName.isEmpty()) {
-                stationName = (new String[]{"四惠|Sihui", "四惠东|Sihui Dong", "天宫院|Tiangongyuan", "高碑店|Gaobeidian", "金安桥|Jinan Qiao", "七里庄|Qilizhuang", "东坝|Dongba", "蓟门桥|Jimen Qiao", "东四十条|Dongsishitiao", "丽泽商务区|Lizeshangwuqu", "······", "······", "······", "······", "······", "······"})[(int) (Math.random() * 10)];
+                stationName = (new String[]{"四惠|Sihui", "四惠东|Sihuidong", "天宫院|Tiangongyuan", "高碑店|Gaobeidian", "金安桥|Jin'anqiao", "七里庄|Qilizhuang", "东坝|Dongba", "蓟门桥|Jimenqiao", "东四十条|Dongsishitiao", "丽泽商务区|Lize Shangwuqu", "······", "······", "······", "······", "······", "······"})[(int) (Math.random() * 10)];
             }
 
-            final List<String> destinations = new ArrayList<>();
-            final List<String> lineNames = new ArrayList<>();
-            final List<Integer> colors = getRouteStream(platformId, (simplifiedRoute, currentStationIndex) -> {
+            List<String> destinations = new ArrayList<>();
+            List<String> lineNames = new ArrayList<>();
+            List<Integer> colors = getRouteStream(platformId, (simplifiedRoute, currentStationIndex) -> {
                 destinations.add(simplifiedRoute.getPlatforms().get(currentStationIndex).getDestination());
                 lineNames.add(simplifiedRoute.getName());
             });
-            final boolean isTerminating = destinations.isEmpty();
+            boolean isTerminating = destinations.isEmpty();
 
-            final int height = scale;
-            final int width = Math.round(height * aspectRatio);
-            final int padding = Math.round(height * paddingScale);
-            final int tileSize = height - padding * 2;
+            int height = scale;
+            int width = Math.round(height * aspectRatio);
+            int padding = Math.round(height * paddingScale);
+            int tileSize = height - padding * 2;
 
             if (width <= 0 || height <= 0) {
                 return null;
             }
 
-            final TCMDynamicResourceCacheV2 clientCache = TCMDynamicResourceCacheV2.instance;
-            final NativeImage nativeImage = new NativeImage(NativeImageFormat.getAbgrMapped(), width, height, false);
-            nativeImage.fillRect(0, 0, width, height, invertColor(backgroundColor));
+            NativeImage nativeImage = new NativeImage(NativeImageFormat.getAbgrMapped(), width, height, false);
+            String finalStationName = stationName.replaceAll("(?i)First", "1st")
+                    .replaceAll("(?i)Second", "2nd")
+                    .replaceAll("(?i)Third", "3rd")
+                    .replaceAll("(?i)Forth", "4th")
+                    .replaceAll("(?i)Fifth", "5th")
+                    .replaceAll("(?i)Sixth", "6th")
+                    .replaceAll("(?i)Seventh", "7th")
+                    .replaceAll("(?i)Eighth", "8th")
+                    .replaceAll("(?i)Ninth", "9th")
+                    .replaceAll("(?i)Tenth", "10th")
+                    .replaceAll("(?i)University", "Univ.")
+                    .replaceAll("(?i)Company", "Co.")
+                    .replaceAll("(?i)Department", "Dept.");
+            NativeImageDrawUtil.createDrawAndApply(nativeImage, (i, g) -> {
+                g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                var du = new AWTDrawUtil(g);
+                du.drawRect(0, 0, width, height, new Color(backgroundColor));
+                g.setFont(autoFontSize(FONT_CJK_LIGHT, 33));
+                var t0c = TextUtil.getCjkParts(finalStationName);
+                var t0w = g.getFontMetrics().stringWidth(t0c);
+                var tmw = g.getFontMetrics().stringWidth("口口口口口口");
+                var t0sx = (double) Math.min(tmw, t0w) / t0w;
+                AffineTransform t0 = new AffineTransform();
+                t0.concatenate(AffineTransform.getScaleInstance(t0sx, 1.0));
+                du.setTransform(t0);
+                du.drawText(t0c, (Font) null, (float) (width / 2.0f / t0sx), height / 2.0f * 1.02f, Color.BLACK, VerticalAlignment.BOTTOM, HorizontalAlignment.CENTER);
+                g.setFont(autoFontSize(FONT_ASCII_BOLD, 18));
+                var t1c = TextUtil.getNonCjkParts(finalStationName);
+                var t1w = g.getFontMetrics().stringWidth(t1c);
+                var t1sx = (double) Math.min(tmw, t1w) / t1w;
+                AffineTransform t1 = new AffineTransform();
+                t1.concatenate(AffineTransform.getScaleInstance(t1sx, 1.0));
+                du.setTransform(t1);
+                du.drawText(t1c, (Font) null, (float) (width / 2.0f / t1sx), height / 2.0f * 1.16f, Color.BLACK, VerticalAlignment.TOP, HorizontalAlignment.CENTER);
+                du.resetTransform();
 
-            final int tilePadding = tileSize / 4;
-            final int leftSize = (tileSize + tilePadding);
-            final int rightSize = (tileSize + tilePadding);
+                int y = height / 2;
 
-            final int[] dimensionsDestination = new int[2];
+                if (!lineNames.isEmpty() && !colors.isEmpty()) {
+                    String ln0;
+                    int li0;
+                    String ln1;
+                    int li1;
 
-            int width1 = leftSize + rightSize + dimensionsDestination[0] - tilePadding * 2 - width;
-            final int leftPadding = (int) horizontalAlignment.getOffset(0, width1);
-            final byte[] pixelsName = clientCache.getTextPixels(stationName, dimensionsDestination, width - leftSize - rightSize - padding * (showToString ? 2 : 1), (int) (tileSize * TCMDynamicResourceCacheV2.LINE_HEIGHT_MULTIPLIER), tileSize * 3 / 5, tileSize * 3 / 10, tilePadding, HorizontalAlignment.CENTER);
-
-            drawString(nativeImage, pixelsName, leftPadding + leftSize - tilePadding, height / 2, dimensionsDestination, HorizontalAlignment.CENTER, VerticalAlignment.CENTER, backgroundColor, textColor, false);
-
-            if (val > 0 && !lineNames.isEmpty()) {
-                for (int i = 0; i < colors.size(); i++) {
-                    String lineName = lineNames.get(i);
-                    lineName = lineName.replaceAll("\\|\\|.+", "");
-                    String[] lineNameSplit = lineName.split("\\|");
-                    StringBuilder lnb = new StringBuilder();
-                    boolean matchesResult = false;
-                    for (int j = 0; j < lineNameSplit.length; j++) {
-                        String s = lineNameSplit[j];
-                        String news;
-                        boolean hasDownNumber = Pattern.matches("^\\d+(.线)|号线", s);
-                        matchesResult = hasDownNumber || matchesResult;
-                        if (IGui.isCjk(s) && hasDownNumber) {
-                            String ends = s.replaceAll("^\\d+", "");
-                            String lineNumber = s.replaceAll(String.format("%s", ends), "");
-                            news = lineNumber + '|' + ends;
-                        } else {
-                            news = s;
-                        }
-                        lnb.append(news);
-                        if (j < (lineNameSplit.length - 1)) lnb.append('|');
-                    }
-                    lineName = lnb.toString();
-                    final int[] dimensionsLineName = new int[2];
-                    int maxWidth = width - tilePadding - (width - leftSize - padding * (showToString ? 2 : 1));
-                    final byte[] pixelsLineName = clientCache.getTextPixels(lineName, dimensionsLineName, maxWidth, (int) (tileSize * TCMDynamicResourceCacheV2.LINE_HEIGHT_MULTIPLIER), tileSize * 4 / 13, tileSize * 2 / 11, tilePadding, HorizontalAlignment.CENTER, matchesResult, scale);
-                    final byte[] pixelsLineName2 = clientCache.getTextPixels(lineName, dimensionsLineName, maxWidth, (int) (tileSize * TCMDynamicResourceCacheV2.LINE_HEIGHT_MULTIPLIER), tileSize * 4 / 13, tileSize * 2 / 11, tilePadding, HorizontalAlignment.CENTER, matchesResult, scale);
-                    int lineColor = colors.get(i);
-                    int lineNameTextColor = val == 1 ? lineColor : getColorLightNess(lineColor) <= 0.67f ? ARGB_WHITE : ARGB_BLACK;
-
-                    int y = (height / (2 * lineNames.size()) * ((i * 2) + 1));
-
-                    if (val == 2) {
-                        int borderWidth = scale * 4 / 6;
-                        int borderHeight = borderWidth / 2;
-                        drawResource(nativeImage, UFEInfo.MOD_ID, LINE_NAME_BORDER_RESOURCE, width * 2 / 11 - borderWidth / 2, y - borderHeight / 2, borderWidth, borderHeight, false, 0, 1, lineColor, false);
-                        drawResource(nativeImage, UFEInfo.MOD_ID, LINE_NAME_BORDER_RESOURCE, width - width * 2 / 11 - borderWidth / 2, y - borderHeight / 2, borderWidth, borderHeight, false, 0, 1, lineColor, false);
-                        drawString(nativeImage, pixelsLineName, width * 2 / 11, y, dimensionsLineName, HorizontalAlignment.CENTER, VerticalAlignment.CENTER, 0, lineNameTextColor, false);
-                        drawString(nativeImage, pixelsLineName2, width - width * 2 / 11, y, dimensionsLineName, HorizontalAlignment.CENTER, VerticalAlignment.CENTER, 0, lineNameTextColor, false);
+                    if (lineNames.size() == 1 || colors.size() == 1 || lineNames.get(1).isEmpty()) {
+                        ln0 = lineNames.getFirst();
+                        li0 = 0;
+                        ln1 = ln0;
+                        li1 = 0;
+                    } else if (lineNames.get(0).isEmpty()) {
+                        li0 = 1;
+                        ln0 = lineNames.get(li0);
+                        ln1 = ln0;
+                        li1 = 1;
                     } else {
-                        drawString(nativeImage, pixelsLineName, width / 7, y, dimensionsLineName, HorizontalAlignment.CENTER, VerticalAlignment.CENTER, 0, lineNameTextColor, false);
-                        drawString(nativeImage, pixelsLineName2, width - width / 7, y, dimensionsLineName, HorizontalAlignment.CENTER, VerticalAlignment.CENTER, 0, lineNameTextColor, false);
+                        if (lineNames.getFirst().compareTo(lineNames.get(1)) <= 0) {
+                            ln0 = lineNames.getFirst();
+                            li0 = 0;
+                            li1 = 1;
+                            ln1 = lineNames.get(li1);
+                        } else {
+                            li0 = 1;
+                            ln0 = lineNames.get(li0);
+                            ln1 = lineNames.getFirst();
+                            li1 = 0;
+                        }
                     }
+
+                    drawRouteName(du, width * 8 / 51, y, scale * 4 / 12, ln0, new Color(colors.get(li0)), val, false, VerticalAlignment.CENTER, HorizontalAlignment.CENTER);
+                    drawRouteName(du, width - width * 8 / 51, y, scale * 4 / 12, ln1, new Color(colors.get(li1)), val, false, VerticalAlignment.CENTER, HorizontalAlignment.CENTER);
                 }
-            }
+            });
 
 
             if (transparentColor != 0) {
@@ -457,36 +720,262 @@ public class TCMRouteMapGeneratorV2 {
         return null;
     }
 
-
-    public static NativeImage generateDirectionArrow(long platformId, boolean hasLeft, boolean hasRight, IGui.HorizontalAlignment horizontalAlignment, boolean showToString, float paddingScale, float aspectRatio, int backgroundColor, int textColor, int transparentColor, int val) {
-        int beijingStyleValue = val;
+    public static NativeImage generateStationsNameInfo(long platformId, String stationName, float aspectRatio, int backgroundColor, int textColor) {
         if (aspectRatio <= 0) {
             return null;
         }
 
         try {
-            final List<String> destinations = new ArrayList<>();
-            final List<Integer> colors = getRouteStream(platformId, (simplifiedRoute, currentStationIndex) -> {
-                final String tempMarker;
-                switch (simplifiedRoute.getCircularState()) {
-                    case CLOCKWISE:
-                        tempMarker = TEMP_CIRCULAR_MARKER_CLOCKWISE;
-                        break;
-                    case ANTICLOCKWISE:
-                        tempMarker = TEMP_CIRCULAR_MARKER_ANTICLOCKWISE;
-                        break;
-                    default:
-                        tempMarker = "";
+            List<String> nextStations = new ArrayList<>();
+            List<Integer> colors = getRouteStream(platformId, (sr, csi) -> {
+                if (csi < sr.getPlatforms().size() - 1) {
+                    nextStations.add(sr.getPlatforms().get(sr.getPlatformIndex(platformId) + 1).getStationName());
                 }
-                destinations.add(tempMarker + simplifiedRoute.getPlatforms().get(currentStationIndex).getDestination());
             });
-            final boolean isTerminating = destinations.isEmpty();
+            boolean isTerminating = nextStations.isEmpty();
+            int height = scale * 2;
+            int width = Math.round(height * aspectRatio);
 
-            final boolean leftToRight = horizontalAlignment == HorizontalAlignment.CENTER ? hasLeft || !hasRight : horizontalAlignment != HorizontalAlignment.RIGHT;
-            final int height = scale;
-            final int width = Math.round(height * aspectRatio);
-            final int padding = Math.round(height * paddingScale);
-            final int tileSize = height - padding * 2;
+            if (width <= 0 || height <= 0) {
+                return null;
+            }
+
+            var finalStationName = stationName.replaceAll("(?i)First", "1st")
+                    .replaceAll("(?i)Second", "2nd")
+                    .replaceAll("(?i)Third", "3rd")
+                    .replaceAll("(?i)Forth", "4th")
+                    .replaceAll("(?i)Fifth", "5th")
+                    .replaceAll("(?i)Sixth", "6th")
+                    .replaceAll("(?i)Seventh", "7th")
+                    .replaceAll("(?i)Eighth", "8th")
+                    .replaceAll("(?i)Ninth", "9th")
+                    .replaceAll("(?i)Tenth", "10th")
+                    .replaceAll("(?i)University", "Univ.")
+                    .replaceAll("(?i)Company", "Co.")
+                    .replaceAll("(?i)Department", "Dept.");
+
+            var tmw = width * 0.87;
+
+            final NativeImage nativeImage = new NativeImage(NativeImageFormat.RGBA, width, height, false);
+            NativeImageDrawUtil.createDrawAndApply(nativeImage, (i, g) -> {
+                g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                var du = new AWTDrawUtil(g);
+                du.drawRect(0, 0, width, height, new Color(backgroundColor));
+
+                if (stationName.isEmpty()) {
+                    return;
+                }
+
+                var r0h = height / 12.5;
+                var r0y = height / 3.0 * 2.0 - r0h;
+
+                if (platformId == 0 || colors.isEmpty()) {
+                    du.drawRect(0, (int) r0y, width, (int) r0h, Color.BLACK);
+                } else {
+                    var r0sh = r0h / colors.size();
+                    for (int j = 0; j < colors.size(); j++) {
+                        int color = colors.get(j);
+                        var r0sy = r0y + r0sh * j;
+                        du.drawRect(0, (int) r0sy, width, (int) r0sh, new Color(color));
+                    }
+                }
+
+                var textColorAWT = new Color(textColor);
+
+                var t1y = height / 2.738;
+                var t1s = height / 8.0;
+                var t1c = TextUtil.getNonCjkParts(finalStationName);
+                var t1f = FONT_ASCII_BOLD.deriveFont(Font.PLAIN, (float) t1s);
+                g.setFont(t1f);
+                var t1w = g.getFontMetrics().stringWidth(t1c);
+                var t1sw = Math.min(tmw, t1w);
+                var t1xs = t1sw / t1w;
+                var t1t = g.getTransform();
+                var t1hs = t1sw != t1w;
+                if (t1hs) {
+                    t1t = new AffineTransform();
+                    t1t.concatenate(AffineTransform.getScaleInstance(t1xs, 1.0));
+                }
+                du.setTransform(t1t);
+                du.drawText(t1c, null, (float) (((double) width / 2) / t1xs), (float) t1y, textColorAWT, VerticalAlignment.TOP, HorizontalAlignment.CENTER);
+                du.resetTransform();
+
+                var t0y = height / 11.75;
+                var t0s = height / 4.25;
+                var t0c = TextUtil.getCjkParts(finalStationName);
+                var t0f = FONT_CJK.deriveFont(Font.PLAIN, (float) t0s);
+                g.setFont(t0f);
+                var t0w = g.getFontMetrics().stringWidth(t0c);
+                var t0sw = Math.min(tmw, t0w);
+                var t0g = Math.min(width / 40.0, (width / 10.0 * 7 - t0w) * 0.15);
+                var t0hs = t0sw != t0w;
+                if (t0g <= 0 || t0hs) {
+                    var t0xs = t0sw / t0w;
+                    var t0t = g.getTransform();
+                    if (t0hs) {
+                        t0t = new AffineTransform();
+                        t0t.concatenate(AffineTransform.getScaleInstance(t0xs, 1.0));
+                    }
+                    du.setTransform(t0t);
+                    du.drawText(t0c, (Font) null, (float) (((double) width / 2) / t0xs), (float) t0y, textColorAWT, VerticalAlignment.TOP, HorizontalAlignment.CENTER);
+                    du.resetTransform();
+                } else {
+                    var t0ca = new ArrayList<Character>();
+                    for (char c : t0c.toCharArray()) {
+                        t0ca.add(c);
+                    }
+                    var t0fm = g.getFontMetrics();
+                    var t0cw = t0ca.stream().map((v) -> t0fm.charWidth(v) + t0g).toList();
+                    double[] t0aw = new double[]{0.0};
+                    t0cw.forEach((v) -> t0aw[0] += v);
+                    t0aw[0] -= t0g;
+                    var t0ax = width / 2.0 - t0aw[0] / 2;
+                    var t0lx = 0.0;
+                    for (char t0jc : t0ca) {
+                        var t0jx = t0ax + t0lx;
+                        du.drawText(String.valueOf(t0jc), (Font) null, (float) t0jx, (float) t0y, textColorAWT, VerticalAlignment.TOP, HorizontalAlignment.LEFT);
+                        t0lx += t0fm.charWidth(t0jc) + t0g;
+                    }
+                }
+
+                if (!isTerminating) {
+                    var t3x = width / 7.66;
+                    var t3y = height - height / 4.34;
+                    var t3s = height / 11.5;
+                    du.drawText("下一站", FONT_CJK_LIGHT.deriveFont(Font.PLAIN, (float) t3s), (float) t3x, (float) t3y, textColorAWT, VerticalAlignment.TOP, HorizontalAlignment.LEFT);
+                    var t4y = t3y + t3s / 5 * 6;
+                    var t4s = t3s * 0.575;
+                    du.drawText("Next Station", FONT_ASCII_BOLD.deriveFont(Font.PLAIN, (float) t4s), (float) t3x, (float) t4y, textColorAWT, VerticalAlignment.TOP, HorizontalAlignment.LEFT);
+
+                    var tnsmw = width * 0.5;
+
+                    var t5s = (t0s / 1.95) / Math.max(1, nextStations.size());
+                    var t5y = height - height / 3.5;
+                    var t5mh = height / 4.0 / nextStations.size();
+                    var t5f = FONT_CJK.deriveFont(Font.PLAIN, (float) t5s);
+                    var t5fm = g.getFontMetrics(t5f);
+
+                    var t6x = width - width / Math.PI;
+                    var t6s = t5s * 0.58;
+                    var t6y = t5y + t5s * 1.2;
+                    var t6f = FONT_ASCII_BOLD.deriveFont(Font.PLAIN, (float) t6s);
+                    var t6fm = g.getFontMetrics(t6f);
+
+                    for (int j = 0; j < nextStations.size(); j++) {
+                        var nextStation = nextStations.get(j);
+                        var t5jc = TextUtil.getCjkParts(nextStation);
+                        var t6jc = TextUtil.getNonCjkParts(nextStation);
+                        var t5jw = t5fm.stringWidth(t5jc);
+                        var t5jrw = Math.min(tnsmw, t5jw);
+                        var t5jxs = t5jrw / t5jw;
+                        var t6jw = t6fm.stringWidth(t6jc);
+                        var t6jrw = Math.min(tnsmw, t6jw);
+                        var t6jxs = t6jrw / t6jw;
+                        var t6rx = t6x + Math.max(t6jrw, t5jrw) * 0.47;
+                        var t5jx = t6rx - t6jrw / 2.0 - t5jrw / 2.0;
+                        var t6jx = t6rx - t6jrw;
+                        var t5jy = t5y + t5mh * j;
+                        var t6jy = t6y + t5mh * j;
+
+                        var t5t = g.getTransform();
+                        var t6t = g.getTransform();
+
+                        if (t5jxs < 1.0) {
+                            t5t = new AffineTransform();
+                            t5t.concatenate(AffineTransform.getScaleInstance(t5jxs, 1.0));
+                        }
+                        du.setTransform(t5t);
+                        du.drawText(t5jc, t5f, (float) (t5jx / t5jxs), (float) t5jy, textColorAWT, VerticalAlignment.TOP, HorizontalAlignment.LEFT);
+                        du.resetTransform();
+
+                        if (t6jxs < 1.0) {
+                            t6t = new AffineTransform();
+                            t6t.concatenate(AffineTransform.getScaleInstance(t6jxs, 1.0));
+                        }
+                        du.setTransform(t6t);
+                        du.drawText(t6jc, t6f, (float) (t6jx / t6jxs), (float) t6jy, textColorAWT, VerticalAlignment.TOP, HorizontalAlignment.LEFT);
+                        du.resetTransform();
+                    }
+                } else {
+                    du.drawText("终点站", FONT_CJK.deriveFont(Font.PLAIN, (float) (t0s / 1.95)), (float) (width / 2), (float) (height - height / 3.5), textColorAWT, VerticalAlignment.TOP, HorizontalAlignment.CENTER);
+                    du.drawText("Terminus", FONT_ASCII_BOLD.deriveFont(Font.PLAIN, (float) (t0s / 1.95 * 0.58)), (float) (width / 2), (float) ((height - height / 3.5) + (t0s / 1.95) * 1.2), textColorAWT, VerticalAlignment.TOP, HorizontalAlignment.CENTER);
+                }
+            });
+            return nativeImage;
+        } catch (Exception e) {
+            TCM.LOGGER.error("Cannot to draw Stations Name Info: ", e);
+        }
+
+        return null;
+    }
+
+    public static NativeImage generateDirectionArrow(long platformId, boolean hasLeft, boolean hasRight, IGui.HorizontalAlignment horizontalAlignment, boolean showToString, float paddingScale, float aspectRatio, int backgroundColor, int textColor, int transparentColor, int val) {
+        if (aspectRatio <= 0) {
+            return null;
+        }
+
+        try {
+            final ObjectArrayList<ObjectIntImmutablePair<SimplifiedRoute>> routeDetails = new ObjectArrayList<>();
+            final ObjectArrayList<ObjectIntImmutablePair<String>> destinations = new ObjectArrayList<>();
+            final List<Integer> colors = getRouteStream(platformId, (simplifiedRoute, currentStationIndex) -> {
+                final String tempMarker = switch (simplifiedRoute.getCircularState()) {
+                    case CLOCKWISE -> TEMP_CIRCULAR_MARKER_CLOCKWISE;
+                    case ANTICLOCKWISE -> TEMP_CIRCULAR_MARKER_ANTICLOCKWISE;
+                    default -> "";
+                };
+                var dest = simplifiedRoute.getPlatforms().get(currentStationIndex).getDestination();
+                if (currentStationIndex < simplifiedRoute.getPlatforms().size() - 1) {
+                    routeDetails.add(new ObjectIntImmutablePair<>(simplifiedRoute, currentStationIndex));
+                    destinations.add(new ObjectIntImmutablePair<>(tempMarker + dest
+                            .replaceAll("(?i)First", "1st")
+                            .replaceAll("(?i)Second", "2nd")
+                            .replaceAll("(?i)Third", "3rd")
+                            .replaceAll("(?i)Forth", "4th")
+                            .replaceAll("(?i)Fifth", "5th")
+                            .replaceAll("(?i)Sixth", "6th")
+                            .replaceAll("(?i)Seventh", "7th")
+                            .replaceAll("(?i)Eighth", "8th")
+                            .replaceAll("(?i)Ninth", "9th")
+                            .replaceAll("(?i)Tenth", "10th")
+                            .replaceAll("(?i)University", "Univ.")
+                            .replaceAll("(?i)Company", "Co.")
+                            .replaceAll("(?i)Department", "Dept."), simplifiedRoute.getPlatforms().size()));
+                }
+            });
+            routeDetails.sort(Comparator.<ObjectIntImmutablePair<SimplifiedRoute>>comparingInt(l -> l.left().getPlatforms().size()).reversed());
+            destinations.sort(Comparator.<ObjectIntImmutablePair<String>>comparingInt(ObjectIntImmutablePair::rightInt).reversed());
+
+            int routeSize = Math.min(destinations.size(), routeDetails.size());
+            for (int i = 1; i < routeSize; i++) {
+                for (int j = 0; j < i; j++) {
+                    int finalI = i;
+                    if (routeDetails.get(j).left().getPlatforms().stream().anyMatch((p) -> p.getStationName().trim().equals(destinations.get(finalI).left().trim()))) {
+                        destinations.set(i, null);
+                        routeDetails.set(i, null);
+                        break;
+                    }
+                }
+            }
+
+            int ci = 0;
+            boolean removeStop = ci >= Math.min(destinations.size(), routeDetails.size());
+            while (!removeStop) {
+                if (destinations.get(ci) == null || routeDetails.get(ci) == null) {
+                    destinations.remove(ci);
+                    routeDetails.remove(ci);
+                } else {
+                    ci++;
+                }
+                removeStop = ci >= Math.min(destinations.size(), routeDetails.size());
+            }
+
+            boolean isTerminating = destinations.isEmpty();
+
+            boolean leftToRight = horizontalAlignment == HorizontalAlignment.CENTER ? hasLeft || !hasRight : horizontalAlignment != HorizontalAlignment.RIGHT;
+            int height = scale;
+            int width = Math.round(height * aspectRatio);
 
             if (width <= 0 || height <= 0) {
                 return null;
@@ -494,25 +983,83 @@ public class TCMRouteMapGeneratorV2 {
 
             final TCMDynamicResourceCacheV2 clientCache = TCMDynamicResourceCacheV2.instance;
             final NativeImage nativeImage = new NativeImage(NativeImageFormat.RGBA, width, height, false);
-            nativeImage.fillRect(0, 0, width, height, invertColor(backgroundColor));
+            NativeImageDrawUtil.createDrawAndApply(nativeImage, (i, g) -> {
+                g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                var du = new AWTDrawUtil(g);
+                du.drawRect(0, 0, width, height, new Color(backgroundColor));
+
+
+                if (isTerminating) {
+                    du.drawText("终点站", (Font) autoFontSize(FONT_CJK_LIGHT, 33), (float) (width / 2.0f), height / 2.0f * 1.02f, Color.BLACK, VerticalAlignment.BOTTOM, HorizontalAlignment.CENTER);
+                    du.drawText("Terminus", (Font) autoFontSize(FONT_ASCII_BOLD, 18), (float) (width / 2.0f), height / 2.0f * 1.16f, Color.BLACK, VerticalAlignment.TOP, HorizontalAlignment.CENTER);
+                } else {
+                    String destinationString = IGui.mergeStations(destinations.stream().map(ObjectIntImmutablePair::left).toList());
+                    boolean noToString = destinationString.startsWith(TEMP_CIRCULAR_MARKER);
+                    destinationString = destinationString.replace(TEMP_CIRCULAR_MARKER, "");
+                    if (!destinationString.isEmpty() && showToString && !noToString) {
+                        destinationString = insertTranslation("gui.tcm.to_cjk", "gui.tcm.to", null, 1, destinationString);
+                    }
+
+                    var a0s = height * 0.60;
+
+                    var t0c = TextUtil.getCjkParts(destinationString);
+                    var as0 = new AttributedString(t0c);
+                    var t0l = t0c.length();
+                    as0.addAttribute(TextAttribute.FONT, autoFontSize(FONT_CJK_LIGHT, 33), 0, t0l);
+                    var t1c = TextUtil.getNonCjkParts(destinationString);
+                    var as1 = new AttributedString(t1c);
+                    var t1l = t1c.length();
+                    as1.addAttribute(TextAttribute.FONT, autoFontSize(FONT_ASCII_BOLD, 18), 0, t1l);
+
+                    if (val == 3) {
+                        as0.addAttribute(TextAttribute.FONT, autoFontSize(FONT_CJK_EXTRA_LIGHT, 33), 0, 2);
+                    }
+                    var t0a = leftToRight ? (((!hasLeft && !hasRight) || (hasLeft && hasRight)) ? HorizontalAlignment.CENTER : HorizontalAlignment.LEFT) : HorizontalAlignment.RIGHT;
+                    var t0w = du.width(as0);
+                    var t0xs = (double) Math.min(t0w, g.getFontMetrics(autoFontSize(FONT_CJK, 33)).stringWidth("口口口口口口口口口")) / t0w;
+                    var gap = scale * 0.20;
+                    var ttw = a0s + t0w * t0xs + gap;
+                    var asx = (width - ttw) / 2;
+                    var t0x = (float) ((hasLeft && hasRight) || (!hasLeft && !hasRight) ? width / 2.0f : leftToRight ? asx + a0s + gap : asx + t0w);
+                    var t0t = new AffineTransform();
+                    t0t.concatenate(AffineTransform.getScaleInstance(t0xs, 1.0));
+                    du.setTransform(t0t);
+                    du.drawText(as0, (float) (t0x / t0xs), height / 2.0f * 1.02f, Color.BLACK, VerticalAlignment.BOTTOM, t0a);
+                    var t1w = du.width(as1);
+                    var t1xs = (double) Math.min(t1w, t0w * 1.06) / t1w;
+                    var t1t = new AffineTransform();
+                    t1t.concatenate(AffineTransform.getScaleInstance(t1xs, 1.0));
+                    du.setTransform(t1t);
+                    if (val == 1 || val == 2) {
+                        du.drawText(as1, (float) ((float) (t0a == HorizontalAlignment.CENTER ? t0x : t0x + (t0a == HorizontalAlignment.LEFT ? t0w : -t0w) / 2.0f) / t1xs), height / 2.0f * 1.16f, Color.BLACK, VerticalAlignment.TOP, HorizontalAlignment.CENTER);
+                    } else {
+                        //var t1x = t0a == HorizontalAlignment.CENTER ? t0x : (t0a == HorizontalAlignment.LEFT ? t0x - t0w / 2.0f : t0x + t0w / 2.0f);
+                        du.drawText(as1, (float) (t0x / t1xs), height / 2.0f * 1.16f, Color.BLACK, VerticalAlignment.TOP, t0a);
+                    }
+                    du.resetTransform();
+
+                    if (hasLeft) {
+                        var a0x = hasRight ? (width - ttw - a0s - gap) / 2 : asx;
+                        var a0y = (height - a0s) / 2;
+                        g.drawImage(blackDirectionArrowPatternImage, (int) a0x, (int) a0y, (int) a0s, (int) a0s, null);
+                    }
+                    if (hasRight) {
+                        var a1st = new AffineTransform();
+                        var a1x = hasLeft ? width - ((width - ttw - a0s - gap) / 2) - a0s : asx + t0w + gap;
+                        var a1y = (height - a0s) / 2;
+                        a1st.translate(a1x + a0s, a1y);
+                        a1st.scale(-1, 1);
+                        du.setTransform(a1st);
+                        g.drawImage(blackDirectionArrowPatternImage, 0, 0, (int) a0s, (int) a0s, null);
+                        du.resetTransform();
+                    }
+                }
+            });
+            /*nativeImage.fillRect(0, 0, width, height, invertColor(backgroundColor));
 
             final int circleX;
             if (isTerminating) {
-                if (beijingStyleValue != 0) {
-                    final int tilePadding = tileSize / 4;
-                    final int leftSize = (tileSize + tilePadding);
-                    final int rightSize = (tileSize + tilePadding);
-
-                    final int[] dimensionsDestination = new int[2];
-
-                    int width1 = leftSize + rightSize + dimensionsDestination[0] - tilePadding * 2 - width;
-
-                    final int leftPadding = (int) horizontalAlignment.getOffset(0, width1);
-                    final byte[] pixelsName = clientCache.getTextPixels("终点站|Terminus", dimensionsDestination, width - leftSize - rightSize - padding * (showToString ? 2 : 1), (int) (tileSize * TCMDynamicResourceCacheV2.LINE_HEIGHT_MULTIPLIER), tileSize * 3 / 5, tileSize * 3 / 10, tilePadding, IGui.HorizontalAlignment.CENTER, false, scale);
-
-                    drawString(nativeImage, pixelsName, leftPadding + leftSize - tilePadding, height / 2, dimensionsDestination, HorizontalAlignment.CENTER, VerticalAlignment.CENTER, backgroundColor, textColor, false);
-                }
-                circleX = (int) horizontalAlignment.getOffset(0, tileSize - width);
             } else {
                 String destinationString = IGui.mergeStations(destinations);
                 final boolean noToString = destinationString.startsWith(TEMP_CIRCULAR_MARKER);
@@ -521,50 +1068,50 @@ public class TCMRouteMapGeneratorV2 {
                     destinationString = insertTranslation(beijingStyleValue == 0 ? "gui.mtr.to_cjk" : "gui.tcm.to_cjk", beijingStyleValue == 0 ? "gui.mtr.to" : "gui.tcm.to", null, 1, destinationString);
                 }
 
-                final int tilePadding = tileSize / 4;
+                final int clearPadding = clearSize / 4;
                 final int leftSize;
                 final int rightSize;
                 if (beijingStyleValue > 0 && ((!hasLeft && !hasRight) || (hasLeft && hasRight))) {
-                    leftSize = (tileSize + tilePadding);
-                    rightSize = (tileSize + tilePadding);
+                    leftSize = (clearSize + clearPadding);
+                    rightSize = (clearSize + clearPadding);
                 } else if (beijingStyleValue > 0) {
-                    leftSize = (hasLeft ? 1 : 0) * (tileSize + tilePadding);
-                    rightSize = (hasRight ? 1 : 0) * (tileSize + tilePadding);
+                    leftSize = (hasLeft ? 1 : 0) * (clearSize + clearPadding);
+                    rightSize = (hasRight ? 1 : 0) * (clearSize + clearPadding);
                 } else {
-                    leftSize = ((hasLeft ? 1 : 0) + (leftToRight ? 1 : 0)) * (tileSize + tilePadding);
-                    rightSize = ((hasRight ? 1 : 0) + (leftToRight ? 0 : 1)) * (tileSize + tilePadding);
+                    leftSize = ((hasLeft ? 1 : 0) + (leftToRight ? 1 : 0)) * (clearSize + clearPadding);
+                    rightSize = ((hasRight ? 1 : 0) + (leftToRight ? 0 : 1)) * (clearSize + clearPadding);
                 }
 
                 HorizontalAlignment textAlignment = beijingStyleValue > 0 && ((!hasLeft && !hasRight) || (hasLeft && hasRight)) ? HorizontalAlignment.CENTER : HorizontalAlignment.LEFT;
 
                 final int[] dimensionsDestination = new int[2];
-                final byte[] pixelsDestination = clientCache.getTextPixels(destinationString, dimensionsDestination, width - leftSize - rightSize - padding * (showToString ? 2 : 1), (int) (tileSize * TCMDynamicResourceCacheV2.LINE_HEIGHT_MULTIPLIER), tileSize * 3 / 5, tileSize * 3 / 10, tilePadding, leftToRight ? textAlignment : HorizontalAlignment.RIGHT, false, scale);
-                final int leftPadding = (int) horizontalAlignment.getOffset(0, leftSize + rightSize + dimensionsDestination[0] - tilePadding * 2 - width);
-                drawString(nativeImage, pixelsDestination, beijingStyleValue > 0 && ((!hasLeft && !hasRight) || (hasLeft && hasRight)) ? width / 2 : leftPadding + leftSize - tilePadding, height / 2, dimensionsDestination, textAlignment, VerticalAlignment.CENTER, backgroundColor, textColor, false);
+                final byte[] pixelsDestination = clientCache.getTextPixels(destinationString, dimensionsDestination, width - leftSize - rightSize - padding * (showToString ? 2 : 1), (int) (clearSize * TCMDynamicResourceCacheV2.LINE_HEIGHT_MULTIPLIER), clearSize * 3 / 5, clearSize * 3 / 10, clearPadding, leftToRight ? textAlignment : HorizontalAlignment.RIGHT, false, scale);
+                final int leftPadding = (int) horizontalAlignment.getOffset(0, leftSize + rightSize + dimensionsDestination[0] - clearPadding * 2 - width);
+                drawString(nativeImage, pixelsDestination, beijingStyleValue > 0 && ((!hasLeft && !hasRight) || (hasLeft && hasRight)) ? width / 2 : leftPadding + leftSize - clearPadding, height / 2, dimensionsDestination, textAlignment, VerticalAlignment.CENTER, backgroundColor, textColor, false);
 
                 if (hasLeft) {
-                    drawResource(nativeImage, ARROW_RESOURCE, leftPadding, padding, tileSize, tileSize, false, 0, 1, textColor, false);
+                    drawResource(nativeImage, ARROW_RESOURCE, leftPadding, padding, clearSize, clearSize, false, 0, 1, textColor, false);
                 }
                 if (hasRight) {
-                    drawResource(nativeImage, ARROW_RESOURCE, leftPadding + leftSize + dimensionsDestination[0] - tilePadding * 2 + rightSize - tileSize, padding, tileSize, tileSize, true, 0, 1, textColor, false);
+                    drawResource(nativeImage, ARROW_RESOURCE, leftPadding + leftSize + dimensionsDestination[0] - clearPadding * 2 + rightSize - clearSize, padding, clearSize, clearSize, true, 0, 1, textColor, false);
                 }
 
-                circleX = leftPadding + leftSize + (leftToRight ? -tileSize - tilePadding : dimensionsDestination[0] - tilePadding);
-            }
+                circleX = leftPadding + leftSize + (leftToRight ? -clearSize - clearPadding : dimensionsDestination[0] - clearPadding);
+            }*/
 
             if (transparentColor != 0) {
                 clearColor(nativeImage, invertColor(transparentColor));
             }
 
             return nativeImage;
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Throwable e) {
+            TCM.LOGGER.error("Cannot to draw PSD Top: ", e);
         }
 
         return null;
     }
 
-    public static NativeImage generateRouteMap(long platformId, boolean vertical, boolean flip, float aspectRatio, boolean transparentWhite) {
+    public static NativeImage generatePSDTopRouteMap(long platformId, boolean flip, float aspectRatio, boolean transparentWhite) {
         if (aspectRatio <= 0) {
             return null;
         }
@@ -575,7 +1122,6 @@ public class TCMRouteMapGeneratorV2 {
             final int routeCount = routeDetails.size();
 
             if (routeCount > 0) {
-                final DynamicTextureCache clientCache = DynamicTextureCache.instance;
                 final ObjectArrayList<LongArrayList> stationsIdsBefore = new ObjectArrayList<>();
                 final ObjectArrayList<LongArrayList> stationsIdsAfter = new ObjectArrayList<>();
                 final ObjectArrayList<Int2ObjectAVLTreeMap<TCMRouteMapGeneratorV2.StationPosition>> stationPositions = new ObjectArrayList<>();
@@ -619,21 +1165,15 @@ public class TCMRouteMapGeneratorV2 {
                 setup(stationPositions, flip ? stationsIdsBefore : stationsIdsAfter, colorIndices, bounds, flip, true);
                 final float xOffset = bounds[0] + 0.5F;
                 setup(stationPositions, flip ? stationsIdsAfter : stationsIdsBefore, colorIndices, bounds, !flip, false);
-                final float rawHeightPart = Math.abs(bounds[1]) + (vertical ? 0.6F : 1);
+                final float rawHeightPart = Math.abs(bounds[1]) + 1;
                 final float rawWidth = xOffset + bounds[0] + 0.5F;
-                final float rawHeightTotal = rawHeightPart + bounds[2] + (vertical ? 0.6F : 1);
+                final float rawHeightTotal = rawHeightPart + bounds[2] + 1;
                 final float rawHeight;
                 final float yOffset;
                 final float extraPadding;
-                if (vertical && rawHeightTotal < MIN_VERTICAL_SIZE) {
-                    rawHeight = MIN_VERTICAL_SIZE;
-                    extraPadding = (MIN_VERTICAL_SIZE - rawHeightTotal) / 2;
-                    yOffset = rawHeightPart + extraPadding;
-                } else {
-                    rawHeight = rawHeightTotal;
-                    extraPadding = 0;
-                    yOffset = rawHeightPart;
-                }
+                rawHeight = rawHeightTotal;
+                extraPadding = 0;
+                yOffset = (float) (rawHeightPart + 0.08);
 
                 final int height;
                 final int width;
@@ -656,9 +1196,8 @@ public class TCMRouteMapGeneratorV2 {
                 }
 
                 final NativeImage nativeImage = new NativeImage(NativeImageFormat.getAbgrMapped(), width, height, false);
-                nativeImage.fillRect(0, 0, width, height, ARGB_WHITE);
-
                 final Object2ObjectOpenHashMap<String, ObjectOpenHashSet<TCMRouteMapGeneratorV2.StationPositionGrouped>> stationPositionsGrouped = new Object2ObjectOpenHashMap<>();
+
                 for (int routeIndex = 0; routeIndex < routeCount; routeIndex++) {
                     final SimplifiedRoute simplifiedRoute = routeDetails.get(routeIndex).left();
                     final int currentIndex = routeDetails.get(routeIndex).rightInt();
@@ -666,9 +1205,6 @@ public class TCMRouteMapGeneratorV2 {
 
                     for (int stationIndex = 0; stationIndex < simplifiedRoute.getPlatforms().size(); stationIndex++) {
                         final TCMRouteMapGeneratorV2.StationPosition stationPosition = routeStationPositions.get(stationIndex - currentIndex);
-                        if (stationIndex < simplifiedRoute.getPlatforms().size() - 1) {
-                            drawLine(nativeImage, stationPosition, routeStationPositions.get(stationIndex + 1 - currentIndex), widthScale, heightScale, xOffset, yOffset, stationIndex < currentIndex ? ARGB_LIGHT_GRAY : ARGB_BLACK | simplifiedRoute.getColor());
-                        }
 
                         final SimplifiedRoutePlatform simplifiedRoutePlatform = simplifiedRoute.getPlatforms().get(stationIndex);
                         final String key = String.format("%s||%s", simplifiedRoutePlatform.getStationName(), simplifiedRoutePlatform.getStationId());
@@ -682,43 +1218,209 @@ public class TCMRouteMapGeneratorV2 {
                                     interchangeRouteNamesForColor.forEach(interchangeNames::add);
                                 }
                             });
-                            Data.put(stationPositionsGrouped, key, new TCMRouteMapGeneratorV2.StationPositionGrouped(stationPosition, stationIndex - currentIndex, interchangeColors, interchangeNames), ObjectOpenHashSet::new);
+                            Data.put(stationPositionsGrouped, key, new TCMRouteMapGeneratorV2.StationPositionGrouped(stationPosition, stationIndex, currentIndex, interchangeColors, interchangeNames), ObjectOpenHashSet::new);
                         }
                     }
                 }
 
-                final int maxStringWidth = (int) (scale * 0.9 * ((vertical ? heightScale : widthScale) / 2 + extraPadding / routeCount));
-                stationPositionsGrouped.forEach((key, stationPositionGroupedSet) -> stationPositionGroupedSet.forEach(stationPositionGrouped -> {
-                    final int x = Math.round((stationPositionGrouped.stationPosition.x + xOffset) * scale * widthScale);
-                    final int y = Math.round((stationPositionGrouped.stationPosition.y + yOffset) * scale * heightScale);
-                    final int lines = stationPositionGrouped.stationPosition.isCommon ? colorIndices[colorIndices.length - 1] : 0;
-                    final IntArrayList interchangeColors = stationPositionGrouped.interchangeColors;
-                    final boolean textBelow = interchangeColors.isEmpty() && (vertical || (stationPositionGrouped.stationPosition.isCommon ? Math.abs(stationPositionGrouped.stationOffset) % 2 == 0 : y >= yOffset * scale));
-                    final boolean currentStation = stationPositionGrouped.stationOffset == 0;
-                    final boolean passed = stationPositionGrouped.stationOffset < 0;
+                NativeImageDrawUtil.createDrawAndApply(nativeImage, (i, g) -> {
+                    g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                    g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                    var du = new AWTDrawUtil(g);
+                    du.drawRect(0, 0, width, height, Color.WHITE);
 
-                    if (!interchangeColors.isEmpty()) {
-                        final int lineHeight = lineSize * 12 / 5;
-                        final int lineWidth = (int) Math.ceil((float) (lineSize + 6) / interchangeColors.size());
-                        for (int i = 0; i < interchangeColors.size(); i++) {
-                            for (int drawX = 0; drawX < lineWidth; drawX++) {
-                                for (int drawY = 0; drawY < lineHeight; drawY++) {
-                                    drawPixelSafe(nativeImage, x + drawX + lineWidth * i - lineWidth * interchangeColors.size() / 2, y + (textBelow ? -1 : lines * lineSpacing) + (textBelow ? -drawY : drawY), passed ? ARGB_LIGHT_GRAY : ARGB_BLACK | interchangeColors.getInt(i));
+                    for (int routeIndex = 0; routeIndex < routeCount; routeIndex++) {
+                        final SimplifiedRoute simplifiedRoute = routeDetails.get(routeIndex).left();
+                        final int currentIndex = routeDetails.get(routeIndex).rightInt();
+                        final Int2ObjectAVLTreeMap<TCMRouteMapGeneratorV2.StationPosition> routeStationPositions = stationPositions.get(routeIndex);
+
+                        for (int stationIndex = 0; stationIndex < simplifiedRoute.getPlatforms().size(); stationIndex++) {
+                            final TCMRouteMapGeneratorV2.StationPosition stationPosition = routeStationPositions.get(stationIndex - currentIndex);
+                            if (stationIndex < simplifiedRoute.getPlatforms().size() - 1) {
+                                drawLineAWT(g, stationPosition, routeStationPositions.get(stationIndex + 1 - currentIndex), widthScale, heightScale, xOffset, yOffset, stationIndex < currentIndex ? ARGB_LIGHT_GRAY : ARGB_BLACK | simplifiedRoute.getColor());
+                            }
+                        }
+                    }
+
+                    final int maxStringWidth = (int) (scale * 0.9 * (widthScale / 2 + extraPadding / routeCount));
+                    stationPositionsGrouped.forEach((key, stationPositionGroupedSet) -> stationPositionGroupedSet.forEach(stationPositionGrouped -> {
+                        final int x = Math.round((stationPositionGrouped.stationPosition.x + xOffset) * scale * widthScale);
+                        final int y = Math.round((stationPositionGrouped.stationPosition.y * 1.1f + yOffset) * scale * heightScale);
+                        final int lines = stationPositionGrouped.stationPosition.isCommon ? colorIndices[colorIndices.length - 1] : 0;
+                        final IntArrayList interchangeColors = stationPositionGrouped.interchangeColors;
+                        boolean isBranchLine = !stationPositionGrouped.stationPosition.isCommon && stationPositionGrouped.stationPosition.y != 0;
+                        final boolean routeDrawMode2 = stationPositionsGrouped.size() >= 15;
+                        final boolean textBelow = (routeDrawMode2 || interchangeColors.isEmpty()) && ((!isBranchLine ? Math.abs(stationPositionGrouped.stationOffset) % 2 == 0 : y >= yOffset * scale)) || stationPositionGrouped.stationPosition.y > 0;
+                        final boolean currentStation = stationPositionGrouped.stationOffset == stationPositionGrouped.stationCurrentAtOffset;
+                        final boolean passed = stationPositionGrouped.stationOffset < stationPositionGrouped.stationCurrentAtOffset;
+
+                        if (!interchangeColors.isEmpty()) {
+                            final int lineHeight = !isBranchLine ? (routeDrawMode2 ? lineSize * 48 / 14 : lineSize * 12 / 5) : (int) (lineSize * 12.0 / 5 * (0.8));
+                            final int lineHeightText = !isBranchLine ? (routeDrawMode2 ? lineSize * 48 / 10 : lineSize * 12 / 3) : (int) (lineSize * 48.0 / 13 * (0.85));
+                            final int lineWidth = (int) Math.ceil((float) (lineSize + 6) / interchangeColors.size());
+                            for (int j = 0; j < interchangeColors.size(); j++) {
+                                g.setColor(new Color(passed ? ARGB_LIGHT_GRAY : ARGB_BLACK | interchangeColors.getInt(j), true));
+                                int ix = x + lineWidth * j - lineWidth * interchangeColors.size() / 2;
+                                int iy = y + (textBelow ? -lineHeight : lines * lineSpacing);
+                                g.fillRect(ix, iy, lineWidth, lineHeight);
+                            }
+
+                            String transferText = insertTranslation("gui.tcm.transfer_cjk", "gui.tcm.transfer", null, 1, IGui.mergeStations(stationPositionGrouped.interchangeNames));
+                            var transferTextColor = new Color(passed ? ARGB_LIGHT_GRAY : ARGB_BLACK, true);
+                            int tx = x;
+                            int ty = y + (textBelow ? -lines * lineSpacing : lines * lineSpacing) + (textBelow ? -8 - lineHeightText : 8 + lineHeightText);
+
+                            String transferCjkPart = TextUtil.getCjkParts(transferText);
+                            String transferNonCjkPart = TextUtil.getNonCjkParts(transferText);
+
+                            if (!transferCjkPart.isEmpty() && !transferNonCjkPart.isEmpty()) {
+                                g.setFont(FONT_CJK_LIGHT.deriveFont(Font.PLAIN, (float) (routeDrawMode2 ? fontSizeBig * 4 / 9 : fontSizeBig * 2 / 4)));
+                                var transferCjkFm = g.getFontMetrics();
+                                int transferCjkWidth = transferCjkFm.stringWidth(transferCjkPart);
+                                int transferCjkHeight = transferCjkFm.getFont().getSize();
+                                g.setFont(FONT_ASCII_BOLD.deriveFont(Font.PLAIN, (float) (routeDrawMode2 ? fontSizeSmall * 4 / 9 : fontSizeSmall * 2 / 4)));
+                                var transferNonCjkFm = g.getFontMetrics();
+                                int transferNonCjkWidth = transferNonCjkFm.stringWidth(transferNonCjkPart);
+                                boolean transformCjk = transferCjkWidth > maxStringWidth;
+                                boolean transformNonCjk = transferNonCjkWidth > maxStringWidth;
+                                int transferNonCjkHeight = (int) (transferNonCjkFm.getFont().getSize() * 1.2);
+
+                                double transferCjkXScale = Math.min(1.0, (double) maxStringWidth / transferCjkWidth);
+                                if (transformCjk) {
+                                    var transform = new AffineTransform();
+                                    transform.concatenate(AffineTransform.getScaleInstance(transferCjkXScale, 1.0));
+                                    du.setTransform(transform);
                                 }
+                                g.setFont(FONT_CJK_LIGHT.deriveFont(Font.PLAIN, (float) (routeDrawMode2 ? fontSizeBig * 4 / 9 : fontSizeBig * 2 / 4)));
+                                du.drawText(transferCjkPart, null, (float) (tx / transferCjkXScale), (float) (textBelow ? ty : ty - transferCjkHeight - transferNonCjkHeight), transferTextColor, VerticalAlignment.TOP, HorizontalAlignment.CENTER);
+                                if (transformCjk) {
+                                    du.resetTransform();
+                                }
+                                double transferNonCjkXScale = Math.min(1.0, (double) maxStringWidth / transferNonCjkWidth);
+                                if (transformNonCjk) {
+                                    var transform = new AffineTransform();
+                                    transform.concatenate(AffineTransform.getScaleInstance(transferNonCjkXScale, 1.0));
+                                    du.setTransform(transform);
+                                }
+                                g.setFont(FONT_ASCII_BOLD.deriveFont(Font.PLAIN, (float) (routeDrawMode2 ? fontSizeSmall * 4 / 9 : fontSizeSmall * 2 / 4)));
+                                du.drawText(transferNonCjkPart, null, (float) (tx / transferNonCjkXScale), (float) (textBelow ? ty + transferCjkHeight : ty - transferNonCjkHeight), transferTextColor, VerticalAlignment.TOP, HorizontalAlignment.CENTER);
+                                if (transformNonCjk) {
+                                    du.resetTransform();
+                                }
+                            } else {
+                                g.setFont(FONT_CJK_LIGHT.deriveFont(Font.PLAIN, (float) (fontSizeBig * 2 / 3)));
+                                du.drawText(transferText, null, (float) tx, (float) ty, transferTextColor, textBelow ? VerticalAlignment.TOP : VerticalAlignment.BOTTOM, HorizontalAlignment.CENTER);
                             }
                         }
 
-                        final int[] dimensions = new int[2];
-                        final byte[] pixels = clientCache.getTextPixels(insertTranslation("gui.tcm.transfer_cjk", "gui.tcm.transfer", null, 1, IGui.mergeStations(stationPositionGrouped.interchangeNames)), dimensions, maxStringWidth - (vertical ? lineHeight : 0), (int) ((fontSizeBig + fontSizeSmall) * TCMDynamicResourceCacheV2.LINE_HEIGHT_MULTIPLIER * 2 / 3), fontSizeBig * 2 / 3, fontSizeSmall * 2 / 3, 0, vertical ? HorizontalAlignment.LEFT : HorizontalAlignment.CENTER);
-                        drawString(nativeImage, pixels, x, y + lines * lineSpacing + 8 + lineHeight, dimensions, HorizontalAlignment.CENTER, textBelow ? VerticalAlignment.BOTTOM : VerticalAlignment.TOP, 0, passed ? ARGB_LIGHT_GRAY : ARGB_BLACK, vertical);
-                    }
+                        drawStationAWT(g, x, y, heightScale, lines, passed, !interchangeColors.isEmpty());
 
-                    drawStation(nativeImage, x, y, heightScale, lines, passed, !interchangeColors.isEmpty());
+                        String stationName = key.split("\\|\\|")[0].replaceAll("(?i)First", "1st")
+                                .replaceAll("(?i)Second", "2nd")
+                                .replaceAll("(?i)Third", "3rd")
+                                .replaceAll("(?i)Forth", "4th")
+                                .replaceAll("(?i)Fifth", "5th")
+                                .replaceAll("(?i)Sixth", "6th")
+                                .replaceAll("(?i)Seventh", "7th")
+                                .replaceAll("(?i)Eighth", "8th")
+                                .replaceAll("(?i)Ninth", "9th")
+                                .replaceAll("(?i)Tenth", "10th")
+                                .replaceAll("(?i)University", "Univ.")
+                                .replaceAll("(?i)Company", "Co.")
+                                .replaceAll("(?i)Department", "Dept.");
+                        int textX = x;
+                        Color textColor = new Color(passed ? ARGB_LIGHT_GRAY : (currentStation && getColorLightNess(routeDetails.get(0).left().getColor()) <= 0.67f ? ARGB_WHITE : ARGB_BLACK), true);
 
-                    final int[] dimensions = new int[2];
-                    final byte[] pixels = clientCache.getTextPixels(key.split("\\|\\|")[0], dimensions, maxStringWidth, (int) ((fontSizeBig + fontSizeSmall) * TCMDynamicResourceCacheV2.LINE_HEIGHT_MULTIPLIER), fontSizeBig, fontSizeSmall, fontSizeSmall / 4, vertical ? IGui.HorizontalAlignment.RIGHT : IGui.HorizontalAlignment.CENTER);
-                    drawString(nativeImage, pixels, x, y + (textBelow ? lines * lineSpacing : -1) + (textBelow ? 1 : -1) * lineSize * 5 / 4, dimensions, IGui.HorizontalAlignment.CENTER, textBelow ? IGui.VerticalAlignment.TOP : IGui.VerticalAlignment.BOTTOM, currentStation ? ARGB_BLACK | routeDetails.get(0).left().getColor() : 0, passed ? ARGB_LIGHT_GRAY : currentStation && getColorLightNess(routeDetails.get(0).left().getColor()) <= 0.67f ? ARGB_WHITE : ARGB_BLACK, vertical);
-                }));
+                        String cjkPart = TextUtil.getCjkParts(stationName);
+                        String nonCjkPart = TextUtil.getNonCjkParts(stationName);
+
+                        int cjkHeight = 0;
+                        int nonCjkHeight = 0;
+
+                        if (!cjkPart.isEmpty() && !nonCjkPart.isEmpty()) {
+                            g.setFont(FONT_CJK.deriveFont(Font.PLAIN, (float) (fontSizeBig * 0.85)));
+                            cjkHeight = (int) (fontSizeBig * 0.85 + (scale * 0.05));
+                            g.setFont(FONT_ASCII_BOLD.deriveFont(Font.PLAIN, (float) (fontSizeSmall * 0.76)));
+                            nonCjkHeight = (int) (fontSizeSmall * 0.8);
+                        } else {
+                            g.setFont(FONT_CJK.deriveFont(Font.PLAIN, (float) fontSizeBig));
+                            cjkHeight = (int) (fontSizeBig + (scale * 0.05));
+                        }
+
+                        int totalHeight = cjkHeight + nonCjkHeight;
+                        int textY = (int) ((y + (textBelow ? lines * lineSpacing : -lines * lineSpacing) + (textBelow ? 1 : -1) * (lineSize * 10.0 / 7)) - scale * 0.025);
+
+                        if (!cjkPart.isEmpty() && !nonCjkPart.isEmpty()) {
+                            g.setFont(FONT_CJK.deriveFont(Font.PLAIN, (float) (fontSizeBig * 0.85)));
+                            var cjkFm = g.getFontMetrics();
+                            int cjkWidth = cjkFm.stringWidth(cjkPart);
+                            g.setFont(FONT_ASCII_BOLD.deriveFont(Font.PLAIN, (float) (fontSizeSmall * 0.76)));
+                            var nonCjkFm = g.getFontMetrics();
+                            int nonCjkWidth = nonCjkFm.stringWidth(nonCjkPart);
+
+                            int totalWidth = Math.max(cjkWidth, nonCjkWidth);
+
+                            double cjkXScale = Math.min(1.0, (double) maxStringWidth / cjkWidth);
+                            double nonCjkXScale = Math.min(1.0, (double) maxStringWidth / nonCjkWidth);
+
+                            if (currentStation) {
+                                int bgColor = ARGB_BLACK | routeDetails.getFirst().left().getColor();
+                                g.setColor(new Color(bgColor, true));
+                                int bgY = textBelow ? (int) (textY - ((totalHeight * 1.2) - totalHeight) / 4) : (int) (textY - totalHeight - ((totalHeight + scale * 0.075) - totalHeight) / 4);
+                                du.drawRadiusRect((int) HorizontalAlignment.CENTER.getOffset((float) (textX), (float) Math.min(maxStringWidth * 1.15, totalWidth + scale * 0.1)), bgY, (int) Math.min(maxStringWidth * 1.15, totalWidth + scale * 0.1), (int) (totalHeight + scale * 0.085), null, lineSize * 0.8);
+                                int arrowScaleX = (int) (scale * 0.25);
+                                int arrowScaleY = (int) (scale * 0.18);
+                                int arrowY = (int) ((textBelow ? textY + totalHeight + scale * 0.04 : textY - totalHeight - arrowScaleY) + (textBelow ? scale : -scale) * 0.05);
+                                var transform = new AffineTransform();
+                                transform.translate(textX + (flip ? arrowScaleX / 2.0 : -arrowScaleX / 2.0), arrowY);
+                                transform.scale(flip ? -1 : 1, 1);
+                                du.setTransform(transform);
+                                g.drawImage(blackDirectionArrowPatternImage, 0, 0, arrowScaleX, arrowScaleY, null);
+                                du.resetTransform();
+                            }
+
+                            boolean transformCjk = cjkWidth > maxStringWidth;
+                            boolean transformNonCjk = nonCjkWidth > maxStringWidth;
+
+                            g.setFont(FONT_CJK.deriveFont(Font.PLAIN, (float) (fontSizeBig * 0.85)));
+                            if (transformCjk) {
+                                var transform = new AffineTransform();
+                                transform.concatenate(AffineTransform.getScaleInstance(cjkXScale, 1.0));
+                                du.setTransform(transform);
+                            }
+                            du.drawText(cjkPart, null, (float) (textX / cjkXScale), (float) (textBelow ? textY : textY - cjkHeight - nonCjkHeight), textColor, VerticalAlignment.TOP, HorizontalAlignment.CENTER);
+                            if (transformCjk) {
+                                du.resetTransform();
+                            }
+                            g.setFont(FONT_ASCII_BOLD.deriveFont(Font.PLAIN, (float) (fontSizeSmall * 0.76)));
+                            if (transformNonCjk) {
+                                var transform = new AffineTransform();
+                                transform.concatenate(AffineTransform.getScaleInstance(nonCjkXScale, 1.0));
+                                du.setTransform(transform);
+                            }
+                            du.drawText(nonCjkPart, null, (float) (textX / nonCjkXScale), (float) (textBelow ? textY + cjkHeight + nonCjkHeight : textY), textColor, VerticalAlignment.BOTTOM, HorizontalAlignment.CENTER);
+                            if (transformNonCjk) {
+                                du.resetTransform();
+                            }
+
+                        } else {
+                            g.setFont(FONT_CJK.deriveFont(Font.PLAIN, (float) fontSizeBig));
+                            var fm = g.getFontMetrics();
+                            int textWidth = fm.stringWidth(stationName);
+
+                            if (currentStation) {
+                                int bgColor = ARGB_BLACK | routeDetails.get(0).left().getColor();
+                                g.setColor(new Color(bgColor, true));
+                                int bgY = textBelow ? textY : textY - cjkHeight;
+                                g.fillRect((int) HorizontalAlignment.CENTER.getOffset(textX, textWidth), bgY, textWidth, cjkHeight);
+                            }
+
+
+                            du.drawText(stationName, null, (float) textX, (float) textY, textColor, textBelow ? VerticalAlignment.TOP : VerticalAlignment.BOTTOM, HorizontalAlignment.CENTER);
+
+                        }
+                    }));
+                });
 
                 if (transparentWhite) {
                     clearColor(nativeImage, ARGB_WHITE);
@@ -800,11 +1502,63 @@ public class TCMRouteMapGeneratorV2 {
         }
     }
 
+    private static void drawRouteName(AWTDrawUtil drawer, int x, int y, int size, String routeName, Color routeColor, int styleId, boolean forceDrawPlainText, VerticalAlignment verticalAlignment, HorizontalAlignment horizontalAlignment) {
+        Color textColor = routeColor;
+        var g = drawer.getGraphics();
+        if (styleId == 2 || styleId == -1) {
+            var bw = (int) (size * 1.9);
+            var bh = size;
+            drawer.drawRadiusRect((int) horizontalAlignment.getOffset(x, bw), (int) verticalAlignment.getOffset(y, bh), bw, bh, routeColor, size / 6.0);
+            textColor = getColorLightNess(routeColor.getRGB()) <= 0.67f ? Color.WHITE : new Color(0, 54, 112);
+            if (styleId == -1) {
+                var border = size * 0.08;
+                drawer.drawBorderedRadiusRect((int) horizontalAlignment.getOffset((float) (x), bw), (int) verticalAlignment.getOffset((float) (y), bh), (int) (bw), (int) (bh), new Color(0, 0, 0, 0), Color.WHITE, size / 6.0, (int) border);
+            }
+        }
+
+        int rni = -1;
+        for (char c : routeName.toCharArray()) {
+            if (!isNumber(String.valueOf(c))) {
+                break;
+            }
+            if (rni < 0) {
+                rni = 0;
+            }
+            rni = rni * 10 + Integer.parseInt(String.valueOf(c));
+        }
+
+        if (rni != -1 && !forceDrawPlainText) {
+            AffineTransform stretch = new AffineTransform();
+            g.setFont(FONT_ASCII.deriveFont(Font.PLAIN, (float) (size * 0.81)));
+            var t0w = g.getFontMetrics().stringWidth(String.valueOf(rni));
+            var t0sx = Math.min(t0w, size * 10.0 / 13.0) / t0w;
+            var t0fx = Math.ceil((x - size * 12.0 / 4.0 * 0.172 + (t0sx * t0w) * 0.08) / t0sx);
+            stretch.concatenate(AffineTransform.getScaleInstance(t0sx, 1.0));
+            drawer.setTransform(stretch);
+            drawer.drawText(String.valueOf(rni), null, (int) t0fx, y + size * 0.28f, textColor, VerticalAlignment.BOTTOM, HorizontalAlignment.CENTER);
+            drawer.resetTransform();
+            var t1x = (float) Math.ceil((x + size * 1.9 / 2) - (t0fx * t0sx - (double) t0w / 2) + (x - size * 1.9 / 2) - (size * 0.08));//(float) (x - (scale * 0.05));
+            var t1w = drawer.drawText(TextUtil.getCjkParts(routeName).replaceFirst(String.valueOf(rni), ""), FONT_CJK.deriveFont(Font.PLAIN, (float) (size * 0.39)), t1x, y - size * 0.365f, textColor, VerticalAlignment.TOP, HorizontalAlignment.RIGHT);
+            drawer.drawText(TextUtil.getNonCjkParts(routeName), FONT_ASCII_BOLD.deriveFont(Font.PLAIN, (float) (size * 0.22)), t1x - (float) t1w / 2.0f, y + size * 0.081f, textColor, VerticalAlignment.TOP, HorizontalAlignment.CENTER);
+        } else {
+            drawer.drawText(TextUtil.getCjkParts(routeName), FONT_CJK.deriveFont(Font.PLAIN, (float) (size * 0.39)), x, y - size * 0.365f, textColor, VerticalAlignment.TOP, HorizontalAlignment.CENTER);
+            drawer.drawText(TextUtil.getNonCjkParts(routeName), FONT_ASCII_BOLD.deriveFont(Font.PLAIN, (float) (size * 0.22)), x, y + size * 0.081f, textColor, VerticalAlignment.TOP, HorizontalAlignment.CENTER);
+        }
+    }
+
     private static float getColorLightNess(int rgb) {
         int r = (rgb >> 16) & 0xff;
         int g = (rgb >> 8) & 0xff;
         int b = (rgb) & 0xff;
         return (float) Math.pow(Math.pow(r / 255.0f, 2.2f) + Math.pow(g / 170.0f, 2.2f) + Math.pow(b / 425.0f, 2.2f), 1 / 2.2f) * 0.547373141f;
+    }
+
+    private static boolean isNumber(String str) {
+        return str.matches("^\\d+$");
+    }
+
+    private static Font autoFontSize(Font font, float size) {
+        return font.deriveFont(Font.PLAIN, size * (scale / 25.0f) / 4);
     }
 
     public static void scrollTextLightRail(GraphicsHolder graphicsHolder, int rows, float availableWidth, float availableHeight, int imageWidth, int imageHeight) {
@@ -888,16 +1642,19 @@ public class TCMRouteMapGeneratorV2 {
     private static IntArrayList getRouteStream(long platformId, BiConsumer<SimplifiedRoute, Integer> nonTerminatingCallback) {
         final IntArrayList colors = new IntArrayList();
         final IntArrayList terminatingColors = new IntArrayList();
-        MinecraftClientData.getInstance().simplifiedRoutes.stream().filter(simplifiedRoute -> simplifiedRoute.getPlatformIndex(platformId) >= 0 && !simplifiedRoute.getName().isEmpty()).sorted().forEach(simplifiedRoute -> {
+        var coll = MinecraftClientData.getInstance().simplifiedRoutes.stream().filter(simplifiedRoute -> simplifiedRoute.getPlatformIndex(platformId) >= 0 && !simplifiedRoute.getName().isEmpty()).sorted().toList();
+        boolean allTerminating = coll.stream().allMatch((r) -> r.getPlatformIndex(platformId) >= r.getPlatforms().size() - 1);
+        //var colla = coll.toList();
+        coll.forEach(simplifiedRoute -> {
             final int currentStationIndex = simplifiedRoute.getPlatformIndex(platformId);
-            if (currentStationIndex < simplifiedRoute.getPlatforms().size() - 1) {
+            if (currentStationIndex >= simplifiedRoute.getPlatforms().size() - 1 && !(currentStationIndex < simplifiedRoute.getPlatforms().size() && allTerminating)) {
+                if (!terminatingColors.contains(simplifiedRoute.getColor())) {
+                    terminatingColors.add(simplifiedRoute.getColor());
+                }
+            } else {
                 nonTerminatingCallback.accept(simplifiedRoute, currentStationIndex);
                 if (!colors.contains(simplifiedRoute.getColor())) {
                     colors.add(simplifiedRoute.getColor());
-                }
-            } else {
-                if (!terminatingColors.contains(simplifiedRoute.getColor())) {
-                    terminatingColors.add(simplifiedRoute.getColor());
                 }
             }
         });
@@ -911,6 +1668,18 @@ public class TCMRouteMapGeneratorV2 {
         final Platform platform = MinecraftClientData.getInstance().platformIdMap.get(platformId);
         final Station station = platform == null ? null : platform.area;
         return station == null ? "" : station.getName();
+    }
+
+    private static void drawLineAWT(Graphics2D g, TCMRouteMapGeneratorV2.StationPosition stationPosition1, TCMRouteMapGeneratorV2.StationPosition stationPosition2, float widthScale, float heightScale, float xOffset, float yOffset, int color) {
+        final int x1 = Math.round((stationPosition1.x + xOffset) * scale * widthScale);
+        final int x2 = Math.round((stationPosition2.x + xOffset) * scale * widthScale);
+        final int y1 = Math.round((stationPosition1.y + yOffset) * scale * heightScale);
+        final int y2 = Math.round((stationPosition2.y + yOffset) * scale * heightScale);
+
+        g.setColor(new Color(color, true));
+        g.setStroke(new BasicStroke(lineSize, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g.drawLine(x1, y1, x2, y2);
+        g.setStroke(new BasicStroke(1));
     }
 
     private static void drawLine(NativeImage nativeImage, TCMRouteMapGeneratorV2.StationPosition stationPosition1, TCMRouteMapGeneratorV2.StationPosition stationPosition2, float widthScale, float heightScale, float xOffset, float yOffset, int color) {
@@ -956,6 +1725,29 @@ public class TCMRouteMapGeneratorV2 {
             for (int yOffset = 0; yOffset < yWidth; yOffset++) {
                 drawPixelSafe(nativeImage, drawX, Math.max(drawY - yOffset, yMin) - 1, color);
                 drawPixelSafe(nativeImage, drawX, Math.min(drawY + yOffset, yMax), color);
+            }
+        }
+    }
+
+    private static void drawStationAWT(Graphics2D g, int x, int y, float heightScale, int lines, boolean passed, boolean isTransferStation) {
+        if (!isTransferStation) {
+            int circleWidth = scale * 2 / 29;
+            g.setColor(Color.WHITE);
+            g.fillOval(x - circleWidth, y - circleWidth, 2 * circleWidth, 2 * circleWidth);
+            g.setColor(passed ? Color.LIGHT_GRAY : Color.BLACK);
+            var stroke = new BasicStroke((float) (scale * 0.021));
+            var previousStroke = g.getStroke();
+            g.setStroke(stroke);
+            g.drawOval(x - circleWidth, y - circleWidth, 2 * circleWidth, 2 * circleWidth);
+            g.setStroke(previousStroke);
+        } else {
+            try {
+                int circleWidth = scale * 2 / 17;
+                g.setColor(Color.WHITE);
+                g.fillOval(x - circleWidth, y - circleWidth, 2 * circleWidth, 2 * circleWidth);
+                g.drawImage(passed ? lightGrayTransferPatternImage : blackTransferPatternImage, x - circleWidth, y - circleWidth, 2 * circleWidth, 2 * circleWidth, null);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
     }
@@ -1156,6 +1948,17 @@ public class TCMRouteMapGeneratorV2 {
         }
     }
 
+    @Unique
+    private static long serializeExit(String exitName) {
+        final char[] characters = exitName.toCharArray();
+        long code = 0;
+        for (final char character : characters) {
+            code = code << 8;
+            code += character;
+        }
+        return code;
+    }
+
     private static void drawPixelSafe(NativeImage nativeImage, int x, int y, int color) {
         if (Utilities.isBetween(x, 0, nativeImage.getWidth() - 1) && Utilities.isBetween(y, 0, nativeImage.getHeight() - 1)) {
             nativeImage.setPixelColor(x, y, invertColor(color));
@@ -1193,12 +1996,14 @@ public class TCMRouteMapGeneratorV2 {
 
         private final TCMRouteMapGeneratorV2.StationPosition stationPosition;
         private final int stationOffset;
+        private final int stationCurrentAtOffset;
         private final IntArrayList interchangeColors;
         private final ObjectArrayList<String> interchangeNames;
 
-        private StationPositionGrouped(TCMRouteMapGeneratorV2.StationPosition stationPosition, int stationOffset, IntArrayList interchangeColors, ObjectArrayList<String> interchangeNames) {
+        private StationPositionGrouped(TCMRouteMapGeneratorV2.StationPosition stationPosition, int stationOffset, int stationCurrentAtOffset, IntArrayList interchangeColors, ObjectArrayList<String> interchangeNames) {
             this.stationPosition = stationPosition;
             this.stationOffset = stationOffset;
+            this.stationCurrentAtOffset = stationCurrentAtOffset;
             this.interchangeColors = interchangeColors;
             this.interchangeNames = interchangeNames;
         }

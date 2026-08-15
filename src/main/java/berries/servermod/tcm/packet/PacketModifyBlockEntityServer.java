@@ -1,5 +1,9 @@
 package berries.servermod.tcm.packet;
 
+import berries.servermod.tcm.TCM;
+import berries.servermod.tcm.block.CRHTicketBarrierBlock;
+import berries.servermod.tcm.block.StationsNameInfoBlock;
+import org.mtr.libraries.it.unimi.dsi.fastutil.longs.LongArrayList;
 import org.mtr.mapping.holder.Direction;
 import org.mtr.mapping.holder.World;
 import org.mtr.mod.block.BlockStationNameEntrance;
@@ -30,37 +34,62 @@ public class PacketModifyBlockEntityServer {
 
         Level level = player.level();
 
-        long selectedId = packet.readLong();
+        int len = packet.readInt();
+        LongArrayList lal = new LongArrayList();
+        for (int i = 0; i < len; i++) {
+            lal.add(i, packet.readLong());
+        }
         server.tell(new TickTask(server.getTickCount(), () -> {
-            BlockEntity entity = level.getBlockEntity(pos);
+            try {
+                BlockEntity entity = level.getBlockEntity(pos);
+                BlockState state = level.getBlockState(pos);
 
-            switch (signal) {
-                case "SNE_EXIT_ZONE" -> {
-                    if (!(entity instanceof BlockStationNameEntrance.BlockEntity)) return;
+                switch (signal) {
+                    case "SNE_EXIT_ZONE" -> {
+                        if (!(entity instanceof BlockStationNameEntrance.BlockEntity) || len != 1) return;
+                        var selectedId = lal.getFirst();
 
-                    invokeSetMethodInBlockEntity(entity, "setSelectedExitZone", selectedId);
-                    invokeSetMethodInBlockEntity(entity, "writeCompoundTag", new org.mtr.mapping.holder.CompoundTag());
+                        invokeSetMethodInBlockEntity(entity, "setSelectedExitZone", selectedId);
+                        invokeSetMethodInBlockEntity(entity, "writeCompoundTag", new org.mtr.mapping.holder.CompoundTag());
 
-                    BlockState state = level.getBlockState(pos);
-                    BlockStationNameEntrance block = (BlockStationNameEntrance) state.getBlock();
-                    block.propagate(new World(level), new org.mtr.mapping.holder.BlockPos(pos), Direction.convert(state.getValue(HorizontalDirectionalBlock.FACING).getClockWise()),
-                            (offsetPos) -> {
-                                BlockEntity newEntity = (BlockEntity) level.getBlockEntity(offsetPos.data);
-                                if (newEntity instanceof BlockStationNameEntrance.BlockEntity) {
-                                    invokeSetMethodInBlockEntity(newEntity, "setSelectedExitZone", selectedId);
-                                }
-                            }, 1);
-                    block.propagate(new World(level), new org.mtr.mapping.holder.BlockPos(pos), Direction.convert(state.getValue(HorizontalDirectionalBlock.FACING).getCounterClockWise()),
-                            (offsetPos) -> {
-                                BlockEntity newEntity = (BlockEntity) level.getBlockEntity(offsetPos.data);
-                                if (newEntity instanceof BlockStationNameEntrance.BlockEntity) {
-                                    invokeSetMethodInBlockEntity(newEntity, "setSelectedExitZone", selectedId);
-                                }
-                            }, 1);
+                        BlockStationNameEntrance block = (BlockStationNameEntrance) state.getBlock();
+                        block.propagate(new World(level), new org.mtr.mapping.holder.BlockPos(pos), Direction.convert(state.getValue(HorizontalDirectionalBlock.FACING).getClockWise()),
+                                (offsetPos) -> {
+                                    BlockEntity newEntity = (BlockEntity) level.getBlockEntity(offsetPos.data);
+                                    if (newEntity instanceof BlockStationNameEntrance.BlockEntity) {
+                                        invokeSetMethodInBlockEntity(newEntity, "setSelectedExitZone", selectedId);
+                                    }
+                                }, 1);
+                        block.propagate(new World(level), new org.mtr.mapping.holder.BlockPos(pos), Direction.convert(state.getValue(HorizontalDirectionalBlock.FACING).getCounterClockWise()),
+                                (offsetPos) -> {
+                                    BlockEntity newEntity = (BlockEntity) level.getBlockEntity(offsetPos.data);
+                                    if (newEntity instanceof BlockStationNameEntrance.BlockEntity) {
+                                        invokeSetMethodInBlockEntity(newEntity, "setSelectedExitZone", selectedId);
+                                    }
+                                }, 1);
+                    }
+                    case "SNE_PLATFORM" -> {
+                        if (!(entity instanceof StationsNameInfoBlock.StationsNameInfoBlockEntity) || len != 1) return;
+
+                        ((StationsNameInfoBlock.StationsNameInfoBlockEntity) entity).selectedPlatformId = lal.getFirst();
+                        entity.setChanged();
+                        level.sendBlockUpdated(pos, state, state, 2);
+                    }
+                    case "SNE_PLATFORM_NUMBERS" -> {
+                        if (!(entity instanceof CRHTicketBarrierBlock.CRHTicketBarrierBlockEntity)) return;
+
+                        ((CRHTicketBarrierBlock.CRHTicketBarrierBlockEntity) entity).selectedPlatforms = new LongArrayList(lal);
+                        entity.setChanged();
+                        level.sendBlockUpdated(pos, state, state, 2);
+                    }
+                    default -> {
+                        return;
+                    }
                 }
-                default -> {
-                    return;
-                }
+            } catch (ClassCastException e) {
+                TCM.LOGGER.warn("Trying to modify NBT to a static block.", e);
+            } catch (Throwable t) {
+                TCM.LOGGER.error("Failed to modify NBT to block: ", t);
             }
         }));
     }

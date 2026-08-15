@@ -6,10 +6,10 @@ import berries.servermod.tcm.UFEInfo;
 import berries.servermod.tcm.packet.PacketSyncServerConfigServer;
 import berries.servermod.tcm.util.TCMComponent;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -23,7 +23,14 @@ public class TCMServerCommand {
                     LiteralArgumentBuilder.<CommandSourceStack>literal("tcms")
                             .then(
                                     LiteralArgumentBuilder.<CommandSourceStack>literal("reload")
-                                            .requires((s) -> Permissions.check(s, "tcm.commands.reload", s.hasPermission(3)))
+                                            .requires((s) -> {
+                                                try {
+                                                    //return me.lucko.fabric.api.permissions.v0.Permissions.check(s, "tcm.commands.reload", s.hasPermission(3));
+                                                    var fun = Class.forName("me.lucko.fabric.api.permissions.v0.Permissions").getMethod("check", SharedSuggestionProvider.class, String.class, boolean.class);
+                                                    return (boolean)fun.invoke(null, s, "tcm.commands.reload", s.hasPermission(3));
+                                                } catch (Exception ignored) {}
+                                                return false;
+                                            })
                                             .executes(
                                                     (stack) -> {
                                                         ServerConfig.INSTANCE.readConfig();

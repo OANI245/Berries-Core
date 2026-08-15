@@ -4,6 +4,7 @@
   "package": "berries.servermod.tcm.client.mixin",
   "compatibilityLevel": "JAVA_17",
   "client": [
+    "CustomResourceLoaderMixin",
     "MixinClientCache",
     "MixinConnection",
     "MixinGenericDirtMessageScreen",
@@ -13,7 +14,15 @@
     "MixinReceivingLevelScreen",
     "MixinRenderRouteBase",
     "MixinStationNameRenderer",
-    "MixinTicketMachineScreen"
+    "MixinTicketMachineScreen",
+    "NativeImageAccessor",
+    "ObjModelAccessor",
+    "OptimizedModelAccessor",
+    "OptimizedModelWrapperAccessor",
+    "RawMeshAccessor",
+    "RenderVehiclesMixin",
+    "VehicleExtensionMixin",
+    "VehicleResourceMixin"
   ],
   "injectors": {
     "defaultRequire": 1

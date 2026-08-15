@@ -139,29 +139,7 @@ public class PayServer {
                 boolean bl = serverPlayer.getInventory().add(stack);
                 if (bl && stack.isEmpty()) {
                     stack.setCount(1);
-                    ItemEntity itemEntity = serverPlayer.drop(stack, false);
-                    if (itemEntity != null) {
-                        itemEntity.makeFakeItem();
-                    }
-
-                    serverPlayer.level()
-                            .playSound(
-                                    null,
-                                    serverPlayer.getX(),
-                                    serverPlayer.getY(),
-                                    serverPlayer.getZ(),
-                                    SoundEvents.ITEM_PICKUP,
-                                    SoundSource.PLAYERS,
-                                    0.2F,
-                                    ((serverPlayer.getRandom().nextFloat() - serverPlayer.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F
-                            );
                     serverPlayer.containerMenu.broadcastChanges();
-                } else {
-                    ItemEntity itemEntity = serverPlayer.drop(stack, false);
-                    if (itemEntity != null) {
-                        itemEntity.setNoPickUpDelay();
-                        itemEntity.setTarget(serverPlayer.getUUID());
-                    }
                 }
             }
         }

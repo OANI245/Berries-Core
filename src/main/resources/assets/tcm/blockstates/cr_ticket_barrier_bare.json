@@ -1,0 +1,20 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "tcm:block/cr_ticket_barrier_bare_right",
+      "y": 0
+    },
+    "facing=east": {
+      "model": "tcm:block/cr_ticket_barrier_bare_right",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "tcm:block/cr_ticket_barrier_bare_right",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "tcm:block/cr_ticket_barrier_bare_right",
+      "y": 270
+    }
+  }
+}

@@ -4,6 +4,7 @@ import com.mojang.datafixers.util.Function3;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -43,17 +44,17 @@ public final class TCMRegistry<T> {
     }
 
     public static void registerPlayerJoinEvent(Consumer<ServerPlayer> consumer) {
-        ServerEntityEvents.ENTITY_LOAD.register((entity, serverWorld) -> {
-            if (entity instanceof ServerPlayer) {
-                consumer.accept((ServerPlayer) entity);
+        ServerPlayConnectionEvents.JOIN.register(new ResourceLocation(UFEInfo.MOD_ID, "j0"), (sgpli, sender, server) -> {
+            if (sgpli.player instanceof ServerPlayer) {
+                consumer.accept((ServerPlayer) sgpli.player);
             }
         });
     }
 
     public static void registerPlayerLeaveEvent(Consumer<ServerPlayer> consumer) {
-        ServerEntityEvents.ENTITY_UNLOAD.register((entity, serverWorld) -> {
-            if (entity instanceof ServerPlayer) {
-                consumer.accept((ServerPlayer) entity);
+        ServerPlayConnectionEvents.DISCONNECT.register(new ResourceLocation(UFEInfo.MOD_ID, "l0"), (sgpli, server) -> {
+            if (sgpli.player instanceof ServerPlayer) {
+                consumer.accept((ServerPlayer) sgpli.player);
             }
         });
     }

@@ -1,5 +1,6 @@
 package berries.servermod.tcm.client.screen.widget;
 
+import berries.servermod.tcm.client.flueroui.FlueroUI;
 import berries.servermod.tcm.client.screen.GUILocations;
 import berries.servermod.tcm.util.TCMComponent;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -79,9 +80,10 @@ public class NavigationBar extends AbstractWidget {
     public void renderWidget(GuiGraphics poseStack, int i, int j, float f) {
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        //RenderSystem.setShaderTexture(0, expanded ? GUILocations.MAIN_SCREEN_NAVIGATION_BAR_EXPANDED_LOCATION : GUILocations.MAIN_SCREEN_NAVIGATION_BAR_LOCATION);
+        RenderSystem.setShaderTexture(0, expanded ? GUILocations.MAIN_SCREEN_NAVIGATION_BAR_EXPANDED_LOCATION : GUILocations.MAIN_SCREEN_NAVIGATION_BAR_LOCATION);
 
         int barWidth = expanded ? width : width / 3;
         poseStack.blit(expanded ? GUILocations.MAIN_SCREEN_NAVIGATION_BAR_EXPANDED_LOCATION : GUILocations.MAIN_SCREEN_NAVIGATION_BAR_LOCATION, getX(), getY(), 0, 0, barWidth, height, barWidth, height);
+        //poseStack.fill(0, 0, barWidth, height, FlueroUI.BACKGROUND_HIGH);
     }
 }

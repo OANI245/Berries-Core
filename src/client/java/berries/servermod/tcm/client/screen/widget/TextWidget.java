@@ -77,7 +77,7 @@ public class TextWidget extends AbstractWidget {
                 }
             }
             case CENTER -> {
-                label.renderCentered(guiGraphics, (int)Math.floor((float) width / 2 / scale) + (int)Math.floor(getX() / scale), (int)Math.floor(getY() / scale), (int) Math.floor(10 / scale), color);
+                label.renderCentered(guiGraphics, /*(int)Math.floor((float) width / 2 / scale)*/ + (int)Math.floor(getX() / scale), (int)Math.floor(getY() / scale), (int) Math.floor(10 / scale), color);
             }
             case RIGHT -> {
                 label.renderLeftAligned(guiGraphics, (int)Math.floor(getX() / scale) + (font.width(getMessage())), (int)Math.floor(getY() / scale), (int) Math.floor(10 / scale), color);
@@ -99,6 +99,10 @@ public class TextWidget extends AbstractWidget {
 
     @Override
     protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+    }
+
+    public int getLineCount() {
+        return label.getLineCount();
     }
 
     public enum Alignment {LEFT, CENTER, RIGHT}

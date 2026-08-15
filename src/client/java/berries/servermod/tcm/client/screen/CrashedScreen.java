@@ -1,5 +1,6 @@
 package berries.servermod.tcm.client.screen;
 
+import berries.servermod.tcm.client.flueroui.widget.FlueroButton;
 import berries.servermod.tcm.util.TCMComponent;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.GuiGraphics;
@@ -20,14 +21,9 @@ public class CrashedScreen extends Screen {
     @Override
     protected void init() {
         addRenderableWidget(
-                Button.builder(
-                        TCMComponent.translatable("gui.tcm.crashed.copy"),
-                        (button) -> this.onClose.run()
-                ).size(120, 20).pos(
-                        this.width / 2 - 60,
-                        this.height - 30
-                ).build()
-        );
+                new FlueroButton(this.width / 2 - 60,
+                        this.height - 30, 120, 20, TCMComponent.translatable("gui.tcm.crashed.copy"),
+                        (button) -> this.onClose.run()));
     }
 
     @Override

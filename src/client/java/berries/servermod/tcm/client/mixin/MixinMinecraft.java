@@ -5,7 +5,9 @@ import berries.servermod.tcm.client.Config;
 import berries.servermod.tcm.client.TCMClient;
 import berries.servermod.tcm.client.screen.CrashedScreen;
 import berries.servermod.tcm.util.TCMComponent;
-import icyllis.modernui.core.Clipboard;
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.mojang.blaze3d.platform.ClipboardManager;
 import icyllis.modernui.mc.ModernUIClient;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -164,17 +166,12 @@ public abstract class MixinMinecraft {
         System.gc();
     }
 
-    @Inject(
-            method = "crash",
-            at = @At("HEAD"),
-            cancellable = true)
-    private static void injected04(CrashReport crashReport, CallbackInfo ci) {
+    @WrapMethod(method = "crash")
+    private static void injected04(CrashReport crashReport, Operation<Void> original) {
         MixinMinecraft.crashReport = crashReport;
         Minecraft.getInstance().tell(() -> {
             openCrashedScreen(crashReport);
         });
-        openCrashedScreen(crashReport);
-        ci.cancel();
     }
 
     @Unique
@@ -197,20 +194,9 @@ public abstract class MixinMinecraft {
     @Unique
     private static void openCrashedScreen(CrashReport crashReport) {
         Minecraft.getInstance().setScreen(new CrashedScreen(() -> {
-            File file = new File(Minecraft.getInstance().gameDirectory, "crash-reports");
-            File file2 = new File(file, "crash-" + Util.getFilenameFormattedDateTime() + "-client.txt");
-            Bootstrap.realStdoutPrintln(crashReport.getFriendlyReport());
-            Clipboard.setText(crashReport.getFriendlyReport());
-            if (crashReport.getSaveFile() != null) {
-                Bootstrap.realStdoutPrintln("#@!@# Game crashed! Crash report saved to: #@!@# " + crashReport.getSaveFile());
-                System.exit(-1);
-            } else if (crashReport.saveToFile(file2)) {
-                Bootstrap.realStdoutPrintln("#@!@# Game crashed! Crash report saved to: #@!@# " + file2.getAbsolutePath());
-                System.exit(-1);
-            } else {
-                Bootstrap.realStdoutPrintln("#@?@# Game crashed! Crash report could not be saved. #@?@#");
-                System.exit(-2);
-            }
+            ClipboardManager cm = new ClipboardManager();
+            cm.setClipboard(Minecraft.getInstance().getWindow().getWindow(), crashReport.getFriendlyReport());
+            crashLegacy(crashReport);
         }));
     }
 
@@ -224,7 +210,10 @@ public abstract class MixinMinecraft {
             return;
         }
 
+        TCM.LOGGER.info("Checking installing...");
+
         if (Config.INSTANCE.isInstalling) {
+            TCM.LOGGER.info("Creating install script...");
             File tmpJava = new File(gameDirectory.getPath() + File.separator + "Uninstaller.java");
             if (tmpJava.exists()) {
                 tmpJava.delete();

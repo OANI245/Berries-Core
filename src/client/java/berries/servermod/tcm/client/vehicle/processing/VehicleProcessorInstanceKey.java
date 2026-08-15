@@ -1,0 +1,40 @@
+package berries.servermod.tcm.client.vehicle.processing;
+
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+public class VehicleProcessorInstanceKey {
+    private final Object[] objs;
+
+    public VehicleProcessorInstanceKey(Object... objs) {
+        this.objs = objs;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        if(other == this) return true;
+        if(other instanceof VehicleProcessorInstanceKey) {
+            VehicleProcessorInstanceKey otherKey = (VehicleProcessorInstanceKey) other;
+            if(otherKey.objs.length != objs.length) return false;
+
+            for(int i = 0; i < objs.length; i++) {
+                if(!objs[i].equals(otherKey.objs[i])) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(objs);
+    }
+
+    @Override
+    public String toString() {
+        return Arrays.stream(objs).map(Object::toString).collect(Collectors.joining("/"));
+    }
+}

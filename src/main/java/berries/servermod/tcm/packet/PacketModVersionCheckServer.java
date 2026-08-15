@@ -12,6 +12,13 @@ public class PacketModVersionCheckServer {
         final FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
         packet.writeUtf(UFEInfo.MOD_VERSION);
         packet.writeVarIntArray(new int[]{UFEInfo.LOWEST_PNB, UFEInfo.PNB_VERSION});
+        try {
+            var changelogs = (String[]) UFEInfo.class.getField("CHANGE_LOGS").get(null);
+            packet.writeInt(changelogs.length);
+            for (String changelog : changelogs) {
+                packet.writeUtf(changelog);
+            }
+        } catch (Exception ignored) {}
         TCMRegistry.sendToPlayer(player, TCM.PACKET_MOD_VERSION_CHECK, packet);
     }
 }

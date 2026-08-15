@@ -1,0 +1,213 @@
+package berries.servermod.tcm.data.vehicle;
+
+import berries.servermod.tcm.packet.RequestStopsDataC2SPacket;
+import berries.servermod.tcm.util.VehicleWrapper;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import org.mtr.core.data.*;
+import org.mtr.mod.InitClient;
+import org.mtr.mod.client.MinecraftClientData;
+import org.mtr.mod.data.VehicleExtension;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+public class VehicleDataCache {
+    public static final MTRDatasetHolder mtrData = new MTRDatasetHolder();
+    private static final Map<Long, SimplifiedStopsData> vehicleStopsCache = new HashMap<>();
+
+    /* Data transfer counter to diagnose network usage in Debug Overlay */
+    public static long stopsDataByteCounter;
+    public static long mtrDataByteCounter;
+
+    /**
+     * Sends a Minecraft packet to request the full stops data from the specified vehicle.
+     * Packet only sent on first invocation of the vehicleId
+     * @param vehicleId The numeric id of the vehicle
+     * @param sidingId The numeric siding id of the belonging vehicle
+     */
+    @Environment(EnvType.CLIENT)
+    public static void requestVehicleStopsData(long vehicleId, long sidingId) {
+        if(!vehicleStopsCache.containsKey(vehicleId)) {
+            vehicleStopsCache.put(vehicleId, null);
+            InitClient.REGISTRY_CLIENT.sendPacketToServer(new RequestStopsDataC2SPacket(vehicleId, sidingId));
+        }
+    }
+
+    public static VehicleWrapper.StopsData buildVehicleStopsData(VehicleExtension vehicleExtension) {
+        SimplifiedStopsData simplifiedStopsData = vehicleStopsCache.get(vehicleExtension.getId());
+        if(simplifiedStopsData == null) return null;
+
+        Siding siding = VehicleDataCache.mtrData.sidingIdMap.get(vehicleExtension.vehicleExtraData.getSidingId());
+        VehicleWrapper.StopsData stopsData = new VehicleWrapper.StopsData(siding, true);
+
+        long lastPlatformId = 0;
+        for(RouteStopsData routeStopsData : simplifiedStopsData.routeStopsData) {
+            long routeId = routeStopsData.routeId;
+            SimplifiedRoute route = VehicleDataCache.mtrData.routeIdMap.get(routeId);
+            stopsData.routeToRun.add(routeId);
+
+            Station destinationStation = VehicleDataCache.mtrData.stationIdMap.get(routeStopsData.stops.get(routeStopsData.stops.size()-1).stationId);
+
+            int stopIdx = 0;
+            for(SimplifiedStop simplifiedStop : routeStopsData.stops) {
+                Station station = VehicleDataCache.mtrData.stationIdMap.get(simplifiedStop.stationId);
+                Platform platform = VehicleDataCache.mtrData.platformIdMap.get(simplifiedStop.platformId);
+                VehicleWrapper.Stop thisStop = new VehicleWrapper.Stop(route, station, platform, station == null ? platform == null ? "" : platform.getName() : station.getName(), simplifiedStop.destination, simplifiedStop.customDestination, simplifiedStop.distance, simplifiedStop.turnbackPlatform);
+                thisStop.destinationStation = destinationStation;
+
+                if(route != null) {
+                    List<SimplifiedRoutePlatform> platforms = route.getPlatforms();
+                    if(stopIdx < platforms.size()) {
+                        SimplifiedRoutePlatform simplifiedRoutePlatform = platforms.get(stopIdx);
+                        simplifiedRoutePlatform.forEach((color, name) -> {
+                            name.forEach(routeName -> {
+                                thisStop.routeInterchanges.add(new VehicleWrapper.Stop.RouteInterchange(color, routeName));
+                            });
+                        });
+                    }
+                }
+                if(station != null) {
+                    thisStop.connectingInterchanges.putAll(mtrData.connectingStationInterchangeMap.getOrDefault(station.getId(), new HashMap<>()));
+                }
+
+                if(lastPlatformId == simplifiedStop.platformId) {
+                    VehicleWrapper.Stop prevStop = stopsData.allStops.get(stopsData.allStops.size()-1);
+                    prevStop.roundUpRoute = thisStop;
+                    prevStop.reverseAtPlatform = true;
+                    prevStop.isRouteSwitchoverStop = true;
+                } else {
+                    stopsData.allStops.add(thisStop);
+                }
+                stopsData.routeStops.computeIfAbsent(routeId, (k) -> new ArrayList<>()).add(thisStop);
+                lastPlatformId = simplifiedStop.platformId;
+                stopIdx++;
+            }
+        }
+
+        return stopsData;
+    }
+
+    public static void clearData() {
+        stopsDataByteCounter = 0;
+        mtrDataByteCounter = 0;
+        vehicleStopsCache.clear();
+        mtrData.stations.clear();
+        mtrData.platforms.clear();
+        mtrData.routes.clear();
+        mtrData.sidings.clear();
+        mtrData.stationIdMap.clear();
+        mtrData.platformIdMap.clear();
+        mtrData.routeIdMap.clear();
+        mtrData.sidingIdMap.clear();
+    }
+
+    public static void putStopsDataCache(long vehicleId, SimplifiedStopsData stopsData) {
+        vehicleStopsCache.put(vehicleId, stopsData);
+    }
+
+    public static void clearStopsDataCache(long vehicleId) {
+        vehicleStopsCache.remove(vehicleId);
+    }
+
+    public static void putMTRDataCache(MTRDatasetHolder other) {
+        mtrData.addFrom(other);
+    }
+
+    public static void tick() {
+        boolean needRegenerateCache = false;
+        for(int i = 0; i < mtrData.stations.size(); i++) {
+            Station data = mtrData.stations.get(i);
+            Station mtrData = MinecraftClientData.getInstance().stationIdMap.get(data.getId());
+            if(mtrData != null && !mtrData.equals(data)) {
+                VehicleDataCache.mtrData.stations.set(i, mtrData);
+                needRegenerateCache = true;
+            }
+        }
+        for(int i = 0; i < mtrData.routes.size(); i++) {
+            SimplifiedRoute data = mtrData.routes.get(i);
+            SimplifiedRoute mtrData = MinecraftClientData.getInstance().simplifiedRouteIdMap.get(data.getId());
+            if(mtrData != null && !mtrData.equals(data)) {
+                VehicleDataCache.mtrData.routes.set(i, mtrData);
+                needRegenerateCache = true;
+            }
+        }
+        for(int i = 0; i < mtrData.platforms.size(); i++) {
+            Platform data = mtrData.platforms.get(i);
+            Platform mtrData = MinecraftClientData.getInstance().platformIdMap.get(data.getId());
+            if(mtrData != null && !mtrData.equals(data)) {
+                VehicleDataCache.mtrData.platforms.set(i, mtrData);
+                needRegenerateCache = true;
+            }
+        }
+        for(int i = 0; i < mtrData.sidings.size(); i++) {
+            Siding data = mtrData.sidings.get(i);
+            Siding mtrData = MinecraftClientData.getInstance().sidingIdMap.get(data.getId());
+            if(mtrData != null && !mtrData.equals(data)) {
+                VehicleDataCache.mtrData.sidings.set(i, mtrData);
+                needRegenerateCache = true;
+            }
+        }
+        if(needRegenerateCache) {
+            mtrData.generateIdMapCache();
+        }
+    }
+
+    public static class SimplifiedStopsData {
+        public final List<RouteStopsData> routeStopsData = new ArrayList<>();
+
+        public void addRouteStopsData(RouteStopsData routeStopsData) {
+            this.routeStopsData.add(routeStopsData);
+        }
+
+        @Override
+        public String toString() {
+            return String.format("SimplifiedStopsData[routeStopsData=\n%s\n]", routeStopsData.stream().map(RouteStopsData::toString).collect(Collectors.joining("\n")));
+        }
+    }
+
+    public static class RouteStopsData {
+        public final long routeId;
+        public final List<SimplifiedStop> stops;
+
+        public RouteStopsData(long routeId) {
+            this.routeId = routeId;
+            this.stops = new ArrayList<>();
+        }
+
+        public void addStop(SimplifiedStop stop) {
+            this.stops.add(stop);
+        }
+
+        @Override
+        public String toString() {
+            return String.format("RouteStopsData[routeId=%d, stopsData=\n%s\n]", routeId, stops.stream().map(SimplifiedStop::toString).collect(Collectors.joining("\n")));
+        }
+    }
+
+    public static class SimplifiedStop {
+        public final long stationId;
+        public final long platformId;
+        public final double distance;
+        public final String destination;
+        public final String customDestination;
+        public final boolean turnbackPlatform;
+
+        public SimplifiedStop(String destination, String customDestination, long stationId, long platformId, double distance, boolean turnbackPlatform) {
+            this.stationId = stationId;
+            this.platformId = platformId;
+            this.distance = distance;
+            this.destination = destination;
+            this.customDestination = customDestination;
+            this.turnbackPlatform = turnbackPlatform;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("SimplifiedStop[stationId=%d,platformId=%d,distance=%f,destination=%s,turnbackPlatform=%s]", stationId, platformId, distance, destination, turnbackPlatform);
+        }
+    }
+}

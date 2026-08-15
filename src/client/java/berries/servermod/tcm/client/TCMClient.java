@@ -2,14 +2,24 @@ package berries.servermod.tcm.client;
 
 import berries.servermod.tcm.TCM;
 import berries.servermod.tcm.UFEInfo;
+import berries.servermod.tcm.block.Blocks;
+import berries.servermod.tcm.block.blockentity.BlockEntityTypes;
 import berries.servermod.tcm.client.commands.TCMClientCommand;
 import berries.servermod.tcm.client.datafix.ClientDataFixes;
 import berries.servermod.tcm.client.packet.*;
+import berries.servermod.tcm.client.render.StationsNameInfoBlockEntityRenderer;
 import berries.servermod.tcm.client.screen.TCMMainScreen;
+import berries.servermod.tcm.client.vehicle.processing.ContentProcessing;
+import berries.servermod.tcm.client.vehicle.processing.Processors;
+import berries.servermod.tcm.data.vehicle.VehicleDataCache;
 import berries.servermod.tcm.util.TCMComponent;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
+import org.mtr.mapping.holder.MinecraftClient;
 import org.mtr.mod.Keys;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -88,6 +98,13 @@ public class TCMClient implements ClientModInitializer {
             );
         }
 
+        //BlockRenderLayerMap.INSTANCE.putBlocks(RenderType.cutout(), Blocks.STATIONS_NAME_INFO_BLOCK);
+        BlockRenderLayerMap.INSTANCE.putBlocks(RenderType.cutout(),
+                Blocks.CR_TICKET_BARRIER_ENTRANCE_BLOCK.get(),
+                Blocks.CR_TICKET_BARRIER_EXIT_BLOCK.get());
+
+        BlockEntityRenderers.register(BlockEntityTypes.STATIONS_NAME_INFO_BLOCK_ENTITY, StationsNameInfoBlockEntityRenderer::new);
+
         TCMClientCommand.register();
         ClientPlayNetworking.registerGlobalReceiver(TCM.PACKET_MOD_VERSION_CHECK, (client, handler, packet, responseSender) -> PacketModVersionCheckClient.receiveVersionCheckS2C(packet));
         ClientPlayNetworking.registerGlobalReceiver(TCM.PACKET_SERVER_VERSION_QUERY, (client, handler, packet, responseSender) -> PacketServerVersionQuery.receiveVersionValueS2C(packet));
@@ -101,11 +118,23 @@ public class TCMClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(TCM.PACKET_PAY_RESULT, (client, handler, packet, responseSender) -> PacketPayClient.receivePayResultS2C(packet));
         ClientPlayNetworking.registerGlobalReceiver(TCM.PACKET_PAY_SCREEN, (client, handler, packet, responseSender) -> PacketPayClient.receivePayScreenS2C(packet));
 
+        Processors.init();
+        ContentProcessing.register();
+
         ClientTickEvents.END_CLIENT_TICK.register((mc) -> {
             if (tcmKeyMapping.isDown() && mc.screen == null) {
                 mc.execute(() -> {
                     TCMMainScreen.open(mc, null);
                 });
+            }
+        });
+
+        ClientTickEvents.START_CLIENT_TICK.register((minecraftServer) -> {
+            ContentProcessing.tick();
+            VehicleDataCache.tick();
+
+            if (MinecraftClient.getInstance().getWorldMapped() == null) {
+                VehicleDataCache.clearData();
             }
         });
     }

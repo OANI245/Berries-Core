@@ -11,6 +11,8 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import icyllis.modernui.mc.MuiScreen;
 import icyllis.modernui.mc.ScreenCallback;
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
+import it.unimi.dsi.fastutil.ints.IntIntImmutablePair;
+import it.unimi.dsi.fastutil.objects.ObjectObjectImmutablePair;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -29,7 +31,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 public class TCMMainScreen extends Screen {
@@ -69,6 +74,8 @@ public class TCMMainScreen extends Screen {
     private final Screen perviousScreen;
     private final PanoramaRenderer panoramaRenderer;
 
+    private final Queue<BiConsumer<ObjectObjectImmutablePair<GuiGraphics, Float>, IntIntImmutablePair>> latestRenderers = new LinkedList<>();
+
     public static final String[] PAGE_IDS = new String[] {"PAGE_MAIN", "PAGE_PLAYER_UTILS", "PAGE_ABOUT_MOD", "PAGE_MOD_SETTINGS"};
 
     private TCMMainScreen(Screen perviousScreen) {
@@ -94,74 +101,20 @@ public class TCMMainScreen extends Screen {
         return new TCMMainScreen(perviousScreen);
     }
 
+    public void renderLastest(BiConsumer<ObjectObjectImmutablePair<GuiGraphics, Float>, IntIntImmutablePair> event) {
+        latestRenderers.add(event);
+    }
+
     @Override
     protected void init() {
         if (minecraft == null) return;
         nav = new NavigationBar(0, 0, 96, height);
-        int contentWidth = this.width - 32;
-        int titleHeight = 22;
-        int titleX = 18;
-        int titleY = 30;
 
         TCMMainScreenPages pagesCreator = new TCMMainScreenPages(this);
 
         pageHome = pagesCreator.getHomePage();
         pagePlayerUtils = pagesCreator.getPlayerUtilsPage();
-
-        int pageAboutWidgetsY = this.height >= 260 ? 88 : (this.height < 210 ? 28 : 48);
-        pageAbout = createPage(2,
-                new TextWidget(titleX, titleY, contentWidth, titleHeight, minecraft.font, TCMComponent.translatable("gui.tcm.main.nav.3"), false, 2.6F),
-                new ImageWidget(contentWidth / 2 - 30, pageAboutWidgetsY, 60, 60, GUILocations.LOGO_LOCATION),
-                new TextWidget(0, pageAboutWidgetsY + 72, contentWidth, 10, minecraft.font, TCMComponent.text(UFEInfo.MOD_NAME), TextWidget.Alignment.CENTER),
-                new TextWidget(0, (pageAboutWidgetsY + 72) + 15, contentWidth, 10, minecraft.font, TCMComponent.translatable("gui.tcm.main.about.second_line", TCM.getFullVersion()), TextWidget.Alignment.CENTER),
-                this.height < 220 ? null : new TextWidget(0, (pageAboutWidgetsY + 72) + 40, contentWidth, 100, minecraft.font, TCMComponent.text(((Supplier<String>) () -> {
-                    StringBuilder builder = new StringBuilder();
-                    builder.append("更新内容：\n");
-                    for (int i = 0; i < UFEInfo.CHANGE_LOGS.length; i++) {
-                        builder.append(i + 1).append(". ").append(UFEInfo.CHANGE_LOGS[i]);
-                        if (i < UFEInfo.CHANGE_LOGS.length - 1) {
-                            builder.append("\n");
-                        }
-                    }
-                    return builder.toString();
-                }).get()).copy().withStyle(Style.EMPTY.withBold(true)), TextWidget.Alignment.CENTER),
-                /*this.height < 180 ? null : new TextWidget(0, (pageAboutWidgetsY + 72) + 35, contentWidth, 10, minecraft.font, TCMComponent.translatable("gui.tcm.main.about.third_line").append(TCMComponent.text("https://github.com/OANI245/Tiancheng-Mod-Core").withStyle(Style.EMPTY.withUnderlined(true).withColor(0x0078D4))), TextWidget.Alignment.CENTER) {
-                    @Override
-                    public void init() {
-                        this.active = true;
-                    }
-
-                    @Override
-                    public boolean mouseClicked(double d, double e, int i) {
-                        if (this.active && this.visible) {
-                            if (this.isValidClickButton(i)) {
-                                boolean bl = this.clicked(d, e);
-                                if (bl) {
-                                    this.playDownSound(Minecraft.getInstance().getSoundManager());
-                                    if (minecraft != null) {
-                                        minecraft.setScreen(new ConfirmLinkScreen((bla) -> {
-                                            if (bla) {
-                                                Util.getPlatform().openUri("https://github.com/OANI245/Tiancheng-Mod-Core");
-                                            }
-
-                                            TCMMainScreen.this.minecraft.tell(() -> {
-                                                TCMMainScreen.this.minecraft.setScreen(TCMMainScreen.this);
-                                            });
-                                        }, "https://github.com/OANI245/Tiancheng-Mod-Core", true));
-                                    }
-                                    return true;
-                                }
-                            }
-
-                            return false;
-                        } else {
-                            return false;
-                        }
-                    }
-                },*/
-                //...
-                new TextWidget(0,  this.height < 180 ?  (pageAboutWidgetsY + 72) + 50 : height - 32, contentWidth, 10, minecraft.font, TCMComponent.translatable("gui.tcm.main.about.powered_by").copy().withStyle(Style.EMPTY.withColor(0xCDCFCD)), TextWidget.Alignment.CENTER)
-        );
+        pageAbout = pagesCreator.getAboutPage();
         pageModSettings = pagesCreator.getSettingsPage();
 
 
@@ -262,6 +215,10 @@ public class TCMMainScreen extends Screen {
         }
 
         super.render(guiGraphics, i, j, f);
+        BiConsumer<ObjectObjectImmutablePair<GuiGraphics, Float>, IntIntImmutablePair> e;
+        while ((e = latestRenderers.poll()) != null) {
+            e.accept(new ObjectObjectImmutablePair<>(guiGraphics, f), new IntIntImmutablePair(i, j));
+        }
     }
 
     public void fillMetroTile(GuiGraphics guiGraphics, int x, int y, int width, int height, int rgb) {

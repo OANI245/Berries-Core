@@ -1,0 +1,220 @@
+{
+  "multipart": [
+    {
+      "when": {
+        "facing": "north",
+        "locked": true
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_close_locked",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "locked": true
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_close_locked",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "locked": true
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_close_locked",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "locked": true
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_close_locked",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "locked": false,
+        "open": "closed"
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_close_unlocked",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "locked": false,
+        "open": "closed"
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_close_unlocked",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "locked": false,
+        "open": "closed"
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_close_unlocked",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "locked": false,
+        "open": "closed"
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_close_unlocked",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "locked": false,
+        "open": "pending"
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_pending",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "locked": false,
+        "open": "pending"
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_pending",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "locked": false,
+        "open": "pending"
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_pending",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "locked": false,
+        "open": "pending"
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_pending",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "locked": false,
+        "open": "open"
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_open",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "locked": false,
+        "open": "open"
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_open",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "locked": false,
+        "open": "open"
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_open",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "locked": false,
+        "open": "open"
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_open",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "locked": false,
+        "open": "open_concessionary"
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_open",
+        "y": 0
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "locked": false,
+        "open": "open_concessionary"
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_open",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "locked": false,
+        "open": "open_concessionary"
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_open",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "locked": false,
+        "open": "open_concessionary"
+      },
+      "apply": {
+        "model": "tcm:block/cr_ticket_barrier_entrance_open",
+        "y": 270
+      }
+    }
+  ]
+}

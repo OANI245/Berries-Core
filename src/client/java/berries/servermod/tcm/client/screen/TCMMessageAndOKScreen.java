@@ -1,29 +1,33 @@
 package berries.servermod.tcm.client.screen;
 
-import com.mojang.blaze3d.vertex.PoseStack;
+import berries.servermod.tcm.UFEInfo;
+import berries.servermod.tcm.client.flueroui.widget.FlueroButton;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FastColor;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Consumer;
 
 public class TCMMessageAndOKScreen extends Screen {
     public Component buttonText;
-    public Consumer<Button> buttonEvent;
+    public Consumer<AbstractButton> buttonEvent;
 
     public boolean isBlackBackground = false;
     public final boolean shouldCloseOnEsc;
 
-    public TCMMessageAndOKScreen(Component message, Component buttonText, Consumer<Button> buttonEvent, boolean shouldCloseOnEsc) {
-        super(message);
+    public TCMMessageAndOKScreen(Component message, Component buttonText, Consumer<AbstractButton> buttonEvent, boolean shouldCloseOnEsc) {
+        super(message.plainCopy().setStyle(Style.EMPTY.withFont(new ResourceLocation(UFEInfo.MOD_ID, "vga"))));
         this.buttonText = buttonText;
         this.buttonEvent = buttonEvent;
         this.shouldCloseOnEsc = shouldCloseOnEsc;
     }
 
-    public TCMMessageAndOKScreen(Component message, Component buttonText, Consumer<Button> buttonEvent, boolean isBlackBackground, boolean shouldCloseOnEsc) {
+    public TCMMessageAndOKScreen(Component message, Component buttonText, Consumer<AbstractButton> buttonEvent, boolean isBlackBackground, boolean shouldCloseOnEsc) {
         this(message, buttonText, buttonEvent, shouldCloseOnEsc);
         this.isBlackBackground = isBlackBackground;
     }
@@ -32,15 +36,15 @@ public class TCMMessageAndOKScreen extends Screen {
     protected void init() {
         int buttonWidth = 120;
         this.addRenderableWidget(
-            Button.builder(buttonText, (Button.OnPress) (button) -> {
-                buttonEvent.accept(button);
-            }).size(buttonWidth, 20).pos(width / 2 - buttonWidth / 2, height - 80).build()
-        );
+                new FlueroButton(width / 2 - buttonWidth / 2, height - 80, buttonWidth, 16, buttonText.plainCopy().setStyle(Style.EMPTY.withFont(new ResourceLocation(UFEInfo.MOD_ID, "vga"))), (button) -> {
+                    buttonEvent.accept(button);
+                })
+        ).setLightMode(true);
         super.init();
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int i, int j, float f) {
+    public void render(@NotNull GuiGraphics guiGraphics, int i, int j, float f) {
         if (minecraft == null) return;
 
         if (isBlackBackground) {

@@ -8,7 +8,6 @@ import berries.servermod.tcm.client.data.TCMDynamicResourceCacheV2;
 import berries.servermod.tcm.client.packet.PacketModVersionCheckClient;
 import berries.servermod.tcm.client.packet.PacketServerVersionQuery;
 import berries.servermod.tcm.client.screen.*;
-import berries.servermod.tcm.client.screen.fragments.MainFragment;
 import berries.servermod.tcm.client.screen.overlay.PrepOverlay;
 import berries.servermod.tcm.client.util.ModUpdate;
 import berries.servermod.tcm.client.util.PayClient;
@@ -19,13 +18,14 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandExceptionType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
-import icyllis.modernui.mc.MuiModApi;
+import it.unimi.dsi.fastutil.objects.ObjectObjectImmutablePair;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.minecraft.CrashReport;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.AbstractButton;
+import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Tuple;
 
@@ -60,24 +60,38 @@ public class TCMClientCommand {
                                                     case 1 -> {
                                                         TCMDialogScreen instance = new TCMDialogScreen(
                                                                 TCMComponent.translatable("gui.tcm.update_dialog.title"),
-                                                                TCMComponent.translatable("gui.tcm.update_dialog.content", "nothing", 0),
+                                                                TCMComponent.translatable("gui.tcm.update_dialog.content", "1. Nothing|2. Nothing|3. Nothing"),
                                                                 true
                                                         );
-                                                        instance.dialogWidth = 240;
-                                                        instance.buttonSettings.add(0, new Tuple<Component, BiConsumer<Minecraft, AbstractButton>>(TCMComponent.translatable("gui.tcm.update_dialog.updateButton.text"), ($, btn) -> {
+                                                        instance.dialogWidth = 250;
+                                                        instance.dialogHeight = 173;
+                                                        instance.isUpdateDialog = true;
+                                                        instance.newVersion = "nothing";
+                                                        instance.buttonSettings.addFirst(new ObjectObjectImmutablePair<>(new ObjectObjectImmutablePair<>(TCMComponent.translatable("gui.tcm.update_dialog.updateButton.text"), true), ($, btn) -> {
                                                             Util.getPlatform().openUri("http://" + TCMClient.syncDirectionIp);
                                                         }));
                                                         mc.setScreen(instance);
                                                     }
                                                     case 2 -> {
-                                                        mc.setScreen(
-                                                                new VersionLowScreen("nothing", 0, "nothing", 0)
+                                                        TCMDialogScreen instance = new TCMDialogScreen(
+                                                                TCMComponent.translatable("gui.tcm.version_check_disconnect.title"),
+                                                                TCMComponent.translatable("gui.tcm.version_check_disconnect.description", UFEInfo.MOD_VERSION, UFEInfo.PNB_VERSION, UFEInfo.MOD_VERSION, UFEInfo.PNB_VERSION, UFEInfo.MOD_VERSION, UFEInfo.PNB_VERSION),
+                                                                false
                                                         );
+                                                        instance.dialogWidth = 250;
+                                                        instance.dialogHeight = 173;
+                                                        instance.isUpdateDialog = true;
+                                                        instance.newVersion = "nothing";
+                                                        instance.screenOnClose = new JoinMultiplayerScreen(null);
+                                                        instance.buttonSettings.addFirst(new ObjectObjectImmutablePair<>(new ObjectObjectImmutablePair<>(TCMComponent.translatable("gui.tcm.version_check_disconnect.dnvButton.text"), true), ($, btn) -> {
+                                                            Util.getPlatform().openUri("http://" + TCMClient.syncDirectionIp);
+                                                        }));
+                                                        instance.buttonSettings.addFirst(new ObjectObjectImmutablePair<>(new ObjectObjectImmutablePair<>(TCMComponent.translatable("gui.tcm.version_check_disconnect.updateButton.text"), false), ($, btn) -> {
+                                                            ModUpdate.screens(false);
+                                                        }));
+                                                        mc.setScreen(instance);
                                                     }
                                                     case 3 -> {
-                                                        MuiModApi.openScreen(new MainFragment());
-                                                    }
-                                                    case 4 -> {
                                                         new Thread(() -> {
                                                             try {
                                                                 Thread.sleep(20000);
@@ -99,10 +113,10 @@ public class TCMClientCommand {
                                                                 )
                                                         );
                                                     }
-                                                    case 5 -> {
+                                                    case 4 -> {
                                                         PayClient.pay(null, 5.0F, (status) -> {});
                                                     }
-                                                    case 6 -> {
+                                                    case 5 -> {
                                                         Minecraft.getInstance().tell(() -> {
                                                             Throwable t = new AssertionError("Testing Screen 6");
                                                             Minecraft.getInstance().emergencySave();
@@ -125,6 +139,7 @@ public class TCMClientCommand {
                                     })
                             )).then(ClientCommandManager.literal("refreshresources").executes((ctx) -> {
                                 TCMDynamicResourceCacheV2.instance.reload();
+                                TCMDynamicResourceCacheV2.instance.refresh();
                                 return 1;
                             })).executes((ctx) -> {
                                 Minecraft mc = Minecraft.getInstance();

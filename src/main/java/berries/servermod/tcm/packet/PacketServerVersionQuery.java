@@ -20,6 +20,13 @@ public class PacketServerVersionQuery {
         packet.writeUtf(UFEInfo.MOD_VERSION);
         packet.writeInt(UFEInfo.PNB_VERSION);
         packet.writeBoolean(openScreen);
+        try {
+            var changelogs = (String[]) UFEInfo.class.getField("CHANGE_LOGS").get(null);
+            packet.writeInt(changelogs.length);
+            for (String changelog : changelogs) {
+                packet.writeUtf(changelog);
+            }
+        } catch (Exception ignored) {}
         TCMRegistry.sendToPlayer(player, TCM.PACKET_SERVER_VERSION_QUERY, packet);
     }
 }

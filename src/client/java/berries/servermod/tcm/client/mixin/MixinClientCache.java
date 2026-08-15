@@ -17,6 +17,10 @@ public class MixinClientCache {
     @Inject(at = @At("TAIL"), method = "reload", remap = false)
     private void injected02(CallbackInfo ci) {
         TCMDynamicResourceCacheV2.instance.reload();
-        DynamicTextureCache.instance.getPixelatedText("", 0, 10, 0, false);
+    }
+
+    @Inject(at = @At("TAIL"), method = "refresh", remap = false)
+    private void injected03(CallbackInfo ci) {
+        TCMDynamicResourceCacheV2.instance.refresh();
     }
 }

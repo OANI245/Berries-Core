@@ -5,7 +5,6 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import org.jetbrains.annotations.NotNull;
 import org.mtr.mapping.holder.*;
-import org.mtr.mod.Init;
 import org.mtr.mod.block.BlockPSDTop;
 import org.mtr.mod.block.IBlock;
 import org.mtr.mod.client.IDrawing;
@@ -14,7 +13,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 
-import static berries.servermod.tcm.block.MixinStates.BEIJING_STYLE;
+import static berries.servermod.tcm.block.MixinStates.PSD_TOP_CONTENT_STYLE;
 
 @Environment(EnvType.CLIENT)
 @Mixin(RenderPSDTop.class)
@@ -57,7 +56,7 @@ public abstract class MixinPSDTopRenderV2 extends RenderRouteBase<BlockPSDTop.Bl
         }*/
         MainRenderer.scheduleRender(TCMDynamicResourceCacheV2.instance.getColorStrip(platformId).identifier, false, QueuedRenderLayer.EXTERIOR, (graphicsHolder, offset) -> {
             storedMatrixTransformations.transform(graphicsHolder, offset);
-            if (state.data.hasProperty(BEIJING_STYLE) && state.data.getValue(BEIJING_STYLE) > 0) {
+            if (state.data.hasProperty(PSD_TOP_CONTENT_STYLE) && state.data.getValue(PSD_TOP_CONTENT_STYLE) > 0) {
                 IDrawing.drawTexture(graphicsHolder, airLeft ? 0.625F : 0, COLOR_STRIP_START + 1 / 96.0F, 0, airRight ? 0.375F : 1, COLOR_STRIP_END, 0, 0, 0, 1, 1, facing, color, light);
                 IDrawing.drawTexture(
                         graphicsHolder,

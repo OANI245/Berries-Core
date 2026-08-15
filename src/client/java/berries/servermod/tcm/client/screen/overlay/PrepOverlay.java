@@ -1,6 +1,7 @@
 package berries.servermod.tcm.client.screen.overlay;
 
 import berries.servermod.tcm.client.Config;
+import berries.servermod.tcm.client.flueroui.TextDrawer;
 import berries.servermod.tcm.client.screen.GUILocations;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -137,6 +138,7 @@ public class PrepOverlay extends Overlay implements GuiEventListener {
         int imageWidth = imageHeight * frames;
         int x = i + (k - i) / 2 - imageHeight / 2;
         int y = j - 8;
+        var ps0 = guiGraphics.pose();
         ResourceLocation animationImageId = Objects.equals(Config.INSTANCE.ringLoadingAnimation, "style1") ? GUILocations.LOADING_ANIMATION_STYLE_1 : GUILocations.LOADING_ANIMATION_STYLE_2;
 
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
@@ -151,15 +153,19 @@ public class PrepOverlay extends Overlay implements GuiEventListener {
         }
 
         if (messageText != null) {
+            ps0.pushPose();
+            var scale = 1.25f;
+            ps0.scale(scale, scale, scale);
             try {
-                guiGraphics.drawString(
-                        minecraft.font, messageText,
-                        (int) ((float) (i + (k - i) / 2 - minecraft.font.width(messageText) / 2)),
-                        (int) (y + (float) imageHeight / 2 + 14),
-                        0xFFFFFF
+                TextDrawer.drawText(guiGraphics,
+                        minecraft.font, messageText, TextDrawer.Alignment.LEFT,
+                        (int) (TextDrawer.Alignment.CENTER.calculateX((int) (minecraft.getWindow().getGuiScaledWidth() / 2.0f), minecraft.font.width(messageText)) / scale),
+                        (int) ((y + (float) imageHeight / 2 + 14) / scale),
+                        0xFFFFFF, false
                 );
             } catch (Throwable ignored) {
             }
+            ps0.popPose();
         }
     }
 

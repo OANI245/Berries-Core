@@ -36,9 +36,10 @@ public interface UFEInfo {
         }
     }).get();
     //最低支持Build
-    int LOWEST_PNB = 249;
+    int LOWEST_PNB = 1560;
 
-    String[] CHANGE_LOGS = new String[] {"新增一个“崩溃页面”，可在游戏崩溃后看到（F3+C不行）", "将未进入世界的设置背景由纯色改为全景图", "修复使用GUI中的按钮执行命令时，命令会输出为聊天信息的BUG"};
+    String[] CHANGE_LOGS = new String[] {
+            "修复了几个bug"};
 
     boolean OPEN_TRIALS = false;
 }

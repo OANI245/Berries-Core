@@ -87,12 +87,24 @@ public class WebMain {
                         asyncContext.complete();
                         return;
                     }
-                    servletOutputStream.write(contentBytes.get());
+                    // 分块写入，避免逐字节写入造成的性能问题与异步超时
+                    int chunk = Math.min(contentBytes.remaining(), 64 * 1024);
+                    if (contentBytes.hasArray()) {
+                        int off = contentBytes.arrayOffset() + contentBytes.position();
+                        servletOutputStream.write(contentBytes.array(), off, chunk);
+                        contentBytes.position(contentBytes.position() + chunk);
+                    } else {
+                        byte[] buf = new byte[chunk];
+                        contentBytes.get(buf);
+                        servletOutputStream.write(buf, 0, chunk);
+                    }
                 }
             }
 
             @Override
             public void onError(Throwable t) {
+                // 之前异常被静默吞掉，导致看不到堆栈；这里补上日志
+                t.printStackTrace();
                 asyncContext.complete();
             }
         });

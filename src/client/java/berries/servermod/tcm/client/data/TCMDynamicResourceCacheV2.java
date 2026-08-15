@@ -10,7 +10,6 @@ import org.mtr.libraries.it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import org.mtr.mapping.holder.*;
 import org.mtr.mapping.mapper.ResourceManagerHelper;
 import org.mtr.mod.Init;
-import org.mtr.mod.client.RouteMapGenerator;
 import org.mtr.mod.config.Config;
 import org.mtr.mod.config.LanguageDisplay;
 import org.mtr.mod.data.IGui;
@@ -43,8 +42,9 @@ public class TCMDynamicResourceCacheV2 {
         String F_ESL = "tcm_exit_sign_letter_%s_%s";
         String F_RS = "tcm_route_square_%s_%s_%s";
         String F_DA = "tcm_direction_arrow_%s_%s_%s_%s_%s_%s_%s_%s_%s_%s_%d";
-        String F_PSN = "tcm_psdtop_station_name_%s_%s_%s_%s_%s_%s_%s_%s_%s_%d";
-        String F_RM = "tcm_route_map_%s_%s_%s_%s_%s";
+        String F_PSN = "tcm_psdtop_station_name_%s_%s_%s_%s_%s_%s_%s_%s_%d";
+        String F_RM = "tcm_route_map_%s_%s_%s_%s";
+        String F_SNI = "tcm_stations_name_info_%s_%s_%s_%s_%s";
     }
 
     private Font font;
@@ -67,6 +67,9 @@ public class TCMDynamicResourceCacheV2 {
     public void reload() {
         font = null;
         fontCjk = null;
+    }
+
+    public void refresh() {
         TCM.LOGGER.debug("Refreshing dynamic resources; {} textures in memory; {} textures queued to be destroyed", dynamicResources.size(), deletedResources.size());
         dynamicResources.values().forEach(dynamicResource -> dynamicResource.needsRefresh = true);
         generatingResources.clear();
@@ -109,8 +112,8 @@ public class TCMDynamicResourceCacheV2 {
         return getResource(String.format(F_TSN, textColor, stationName, stationColor, aspectRatio), () -> TCMRouteMapGeneratorV2.generateTallStationName(textColor, stationName, stationColor, aspectRatio), TCMDynamicResourceCacheV2.DefaultRenderingColor.TRANSPARENT);
     }
 
-    public TCMDynamicResourceCacheV2.DynamicResource getStationNameEntrance(int textColor, String stationName, float aspectRatio, String[] lineNames, Integer[] lineColors, int lineNamesLength, String[] exitZone) {
-        return getResource(String.format(F_SNE, textColor, stationName, aspectRatio, Arrays.toString(lineNames), Arrays.toString(exitZone)), () -> TCMRouteMapGeneratorV2.generateStationNameEntrance(textColor, stationName, aspectRatio, lineNames, lineColors, lineNamesLength, exitZone), TCMDynamicResourceCacheV2.DefaultRenderingColor.TRANSPARENT);
+    public TCMDynamicResourceCacheV2.DynamicResource getStationNameEntrance(int textColor, String stationName, float aspectRatio, long stationId, long selectedExit) {
+        return getResource(String.format(F_SNE, textColor, stationName, aspectRatio, stationId, selectedExit), () -> TCMRouteMapGeneratorV2.generateStationNameEntrance(textColor, stationName, aspectRatio, stationId, selectedExit), TCMDynamicResourceCacheV2.DefaultRenderingColor.TRANSPARENT);
     }
 
     public TCMDynamicResourceCacheV2.DynamicResource getSingleRowStationName(long platformId, float aspectRatio) {
@@ -137,12 +140,16 @@ public class TCMDynamicResourceCacheV2 {
         return getResource(String.format(F_DA, platformId, hasLeft, hasRight, horizontalAlignment, showToString, paddingScale, aspectRatio, backgroundColor, textColor, transparentColor, style), () -> TCMRouteMapGeneratorV2.generateDirectionArrow(platformId, hasLeft, hasRight, horizontalAlignment, showToString, paddingScale, aspectRatio, backgroundColor, textColor, transparentColor, style), transparentColor == 0 && backgroundColor == ARGB_WHITE ? TCMDynamicResourceCacheV2.DefaultRenderingColor.WHITE : TCMDynamicResourceCacheV2.DefaultRenderingColor.TRANSPARENT);
     }
 
-    public TCMDynamicResourceCacheV2.DynamicResource getPSDTopStationName(long platformId, String stationName, IGui.HorizontalAlignment horizontalAlignment, boolean showToString, float paddingScale, float aspectRatio, int backgroundColor, int textColor, int transparentColor, int val) {
-        return getResource(String.format(F_PSN, platformId, stationName, horizontalAlignment, showToString, paddingScale, aspectRatio, backgroundColor, textColor, transparentColor, val), () -> TCMRouteMapGeneratorV2.generatePSDTopStationName(platformId, stationName, horizontalAlignment, showToString, paddingScale, aspectRatio, backgroundColor, textColor, transparentColor, val), transparentColor == 0 && backgroundColor == ARGB_WHITE ? TCMDynamicResourceCacheV2.DefaultRenderingColor.WHITE : TCMDynamicResourceCacheV2.DefaultRenderingColor.TRANSPARENT);
+    public TCMDynamicResourceCacheV2.DynamicResource getPSDTopStationName(long platformId, String stationName, boolean showToString, float paddingScale, float aspectRatio, int backgroundColor, int textColor, int transparentColor, int val) {
+        return getResource(String.format(F_PSN, platformId, stationName, showToString, paddingScale, aspectRatio, backgroundColor, textColor, transparentColor, val), () -> TCMRouteMapGeneratorV2.generatePSDTopStationName(platformId, stationName, showToString, paddingScale, aspectRatio, backgroundColor, textColor, transparentColor, val), transparentColor == 0 && backgroundColor == ARGB_WHITE ? TCMDynamicResourceCacheV2.DefaultRenderingColor.WHITE : TCMDynamicResourceCacheV2.DefaultRenderingColor.TRANSPARENT);
     }
 
-    public TCMDynamicResourceCacheV2.DynamicResource getRouteMap(long platformId, boolean vertical, boolean flip, float aspectRatio, boolean transparentWhite) {
-        return getResource(String.format(F_RM, platformId, vertical, flip, aspectRatio, transparentWhite), () -> TCMRouteMapGeneratorV2.generateRouteMap(platformId, vertical, flip, aspectRatio, transparentWhite), transparentWhite ? TCMDynamicResourceCacheV2.DefaultRenderingColor.TRANSPARENT : TCMDynamicResourceCacheV2.DefaultRenderingColor.WHITE);
+    public TCMDynamicResourceCacheV2.DynamicResource getPSDTopRouteMap(long platformId, boolean flip, float aspectRatio, boolean transparentWhite) {
+        return getResource(String.format(F_RM, platformId, flip, aspectRatio, transparentWhite), () -> TCMRouteMapGeneratorV2.generatePSDTopRouteMap(platformId, flip, aspectRatio, transparentWhite), transparentWhite ? TCMDynamicResourceCacheV2.DefaultRenderingColor.TRANSPARENT : TCMDynamicResourceCacheV2.DefaultRenderingColor.WHITE);
+    }
+
+    public TCMDynamicResourceCacheV2.DynamicResource getStationsNameInfo(long platformId, String stationName, float aspectRatio, int backgroundColor, int textColor) {
+        return getResource(String.format(F_SNI, platformId, stationName, aspectRatio, backgroundColor, textColor), () -> TCMRouteMapGeneratorV2.generateStationsNameInfo(platformId, stationName, aspectRatio, backgroundColor, textColor), TCMDynamicResourceCacheV2.DefaultRenderingColor.TRANSPARENT);
     }
 
     public byte[] getTextPixels(String text, int[] dimensions, int fontSizeCjk, int fontSize) {
@@ -330,6 +337,7 @@ public class TCMDynamicResourceCacheV2 {
             });
         });
         TCMRouteMapGeneratorV2.setConstants();
+        TCMRouteMapGeneratorV2.loadPatternImages();
         generatingResources.add(key);
 
         if (dynamicResource == null) {

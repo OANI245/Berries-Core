@@ -2,6 +2,7 @@ package berries.servermod.tcm.client.mixin;
 
 import berries.servermod.tcm.client.Config;
 import berries.servermod.tcm.client.data.LogoTexture2;
+import berries.servermod.tcm.client.flueroui.TextDrawer;
 import berries.servermod.tcm.client.screen.GUILocations;
 import berries.servermod.tcm.util.TCMComponent;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -61,6 +62,8 @@ public abstract class MixinLoadingOverlay extends Overlay {
             int x = i + (k - i) / 2 - imageHeight / 2;
             int y = j - 8;
 
+            var ps0 = guiGraphics.pose();
+
             if (canShowRing || fadeIn) {
                 ResourceLocation animationImageId = Objects.equals(Config.INSTANCE.ringLoadingAnimation, "style1") ? GUILocations.LOADING_ANIMATION_STYLE_1 : GUILocations.LOADING_ANIMATION_STYLE_2;
 
@@ -81,16 +84,20 @@ public abstract class MixinLoadingOverlay extends Overlay {
             }
 
             if (fadeIn) {
+                ps0.pushPose();
+                var scale = 1.25f;
+                ps0.scale(scale, scale, scale);
                 try {
                     Component text = TCMComponent.translatable("gui.tcm.loading.reloading");
-                    guiGraphics.drawString(
-                            minecraft.font, text,
-                            (int) ((float) (i + (k - i) / 2 - minecraft.font.width(text) / 2)),
-                            (int) (y + (float) imageHeight / 2 + 14),
-                            0xFFFFFF
+                    TextDrawer.drawText(guiGraphics,
+                            minecraft.font, text, TextDrawer.Alignment.LEFT,
+                            (int) (TextDrawer.Alignment.CENTER.calculateX((int) (minecraft.getWindow().getGuiScaledWidth() / 2.0f), minecraft.font.width(text)) / scale),
+                            (int) ((y + (float) imageHeight / 2 + 14) / scale),
+                            0xFFFFFF, false
                     );
                 } catch (Throwable ignored) {
                 }
+                ps0.popPose();
             }
             ci.cancel();
         }

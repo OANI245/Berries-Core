@@ -9,11 +9,15 @@
     "defaultRequire": 1
   },
   "mixins": [
+    "InitAccessor",
+    "MainAccessor",
     "MixinErrorHandler",
     "MixinPacketAddBalance",
+    "MixinPSDTopBlock",
     "MixinStationNameBlockEntity",
     "MixinStationNameEntranceBlock",
     "MixinTextContext",
-    "MixinPSDTopBlock"
+    "SidingAccessor",
+    "VehicleSchemaAccessor"
   ]
 }

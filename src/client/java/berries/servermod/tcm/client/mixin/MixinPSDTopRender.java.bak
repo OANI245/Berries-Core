@@ -24,7 +24,7 @@ import org.spongepowered.asm.mixin.Unique;
 
 import java.lang.reflect.InvocationTargetException;
 
-import static berries.servermod.tcm.block.MixinStates.BEIJING_STYLE;
+import static berries.servermod.tcm.block.MixinStates.PSD_TOP_CONTENT_STYLE;
 import static berries.servermod.tcm.block.MixinStates.PSD_TOP_DISPLAY_TYPE;
 
 @Mixin(value = RenderPSDTop.class)
@@ -144,8 +144,8 @@ public abstract class MixinPSDTopRender extends RenderRouteBase<BlockPSDTop.Bloc
                         final ResourceLocation resourceLocation;
                         boolean transparentWhite = true;
                         if (renderType == Class.forName("mtr.render.RenderRouteBase$RenderType").getField("ARROW").get(null)) {
-                            if (state.getValue(BEIJING_STYLE) == 0 || type == MixinStates.BeijingStylePSDTopType.DEFAULT) {
-                                resourceLocation = TCMDynamicResourceCache.instance.getDirectionArrow(platformId, (arrowDirection & 0b01) > 0, (arrowDirection & 0b10) > 0, IGui.HorizontalAlignment.CENTER, true, 0.25F, width / height, ARGB_WHITE, ARGB_BLACK, ARGB_WHITE, blockEntity.getBlockState().getValue(BEIJING_STYLE)).resourceLocation;
+                            if (state.getValue(PSD_TOP_CONTENT_STYLE) == 0 || type == MixinStates.BeijingStylePSDTopType.DEFAULT) {
+                                resourceLocation = TCMDynamicResourceCache.instance.getDirectionArrow(platformId, (arrowDirection & 0b01) > 0, (arrowDirection & 0b10) > 0, IGui.HorizontalAlignment.CENTER, true, 0.25F, width / height, ARGB_WHITE, ARGB_BLACK, ARGB_WHITE, blockEntity.getBlockState().getValue(PSD_TOP_CONTENT_STYLE)).resourceLocation;
                             } else {
                                 Station station = RailwayData.getStation(ClientData.STATIONS, ClientData.DATA_CACHE, pos);
                                 String stationName;
@@ -154,10 +154,10 @@ public abstract class MixinPSDTopRender extends RenderRouteBase<BlockPSDTop.Bloc
                                 } else {
                                     stationName = station.name;
                                 }
-                                resourceLocation = TCMDynamicResourceCache.instance.getPSDTopStationName(platformId, stationName, HorizontalAlignment.CENTER, true, 0.25F, width / height, ARGB_WHITE, ARGB_BLACK, ARGB_WHITE, blockEntity.getBlockState().getValue(BEIJING_STYLE)).resourceLocation;
+                                resourceLocation = TCMDynamicResourceCache.instance.getPSDTopStationName(platformId, stationName, HorizontalAlignment.CENTER, true, 0.25F, width / height, ARGB_WHITE, ARGB_BLACK, ARGB_WHITE, blockEntity.getBlockState().getValue(PSD_TOP_CONTENT_STYLE)).resourceLocation;
                             }
                         } else {
-                            if (state.getValue(BEIJING_STYLE) != 0) {
+                            if (state.getValue(PSD_TOP_CONTENT_STYLE) != 0) {
                                 resourceLocation = TCMDynamicResourceCache.instance.getRouteMap(platformId, false, arrowDirection == 2, width / height, transparentWhite).resourceLocation;
                             } else {
                                 resourceLocation = ClientData.DATA_CACHE.getRouteMap(platformId, false, arrowDirection == 2, width / height, transparentWhite).resourceLocation;
@@ -210,7 +210,7 @@ public abstract class MixinPSDTopRender extends RenderRouteBase<BlockPSDTop.Bloc
                 light12 = light;
             }*/
 
-            if (state.hasProperty(BEIJING_STYLE) && state.getValue(BEIJING_STYLE) > 0) {
+            if (state.hasProperty(PSD_TOP_CONTENT_STYLE) && state.getValue(PSD_TOP_CONTENT_STYLE) > 0) {
                 IDrawing.drawTexture(matrices, vertexConsumer, airLeft ? 0.625F : 0, COLOR_STRIP_START + 1 / 96.0F, 0, airRight ? 0.375F : 1, COLOR_STRIP_END, 0, 0, 0, 1, 1, facing, color, light);
                 IDrawing.drawTexture(
                         matrices, vertexConsumer,

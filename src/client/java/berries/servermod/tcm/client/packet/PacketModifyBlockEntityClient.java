@@ -7,16 +7,18 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
 public class PacketModifyBlockEntityClient {
-    public static void sendModifyBlockEntityC2S(BlockPos blockPos, Set<Long> value) {
+    public static void sendModifyBlockEntityC2S(BlockPos blockPos, String type, Collection<Long> value) {
         FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
         List<Long> valueToList = new ArrayList<>(value);
-        packet.writeUtf("SNE_EXIT_ZONE");
+        packet.writeUtf(type);
         packet.writeBlockPos(blockPos);
-        packet.writeLong(!valueToList.isEmpty() ? valueToList.get(0) : 0);
+        packet.writeInt(valueToList.size());
+        valueToList.forEach(packet::writeLong);
         ClientPlayNetworking.send(TCM.PACKET_MODIFY_BLOCK_ENTITY, packet);
     }
 }
