@@ -1,0 +1,22 @@
+{
+	"format_version": "1.9.0",
+	"credit": "Made with Blockbench",
+	"textures": {
+		"particle": "tcm:block/stations_name_info",
+		"main": "tcm:block/stations_name_info"
+	},
+	"elements": [
+		{
+			"from": [0.8, 3.1, 15.5],
+			"to": [15.2, 12.9, 16],
+			"rotation": {"angle": 0, "axis": "y", "origin": [0, 0.2, 15]},
+			"faces": {
+				"east": {"uv": [0, 3.3, 0.5, 13.1], "texture": "#main"},
+				"south": {"uv": [0.8, 3.3, 15.2, 13.1], "texture": "#main", "cullface": "south"},
+				"west": {"uv": [0.5, 3.3, 1, 13.1], "texture": "#main"},
+				"up": {"uv": [0.8, 0.5, 15.2, 1], "texture": "#main"},
+				"down": {"uv": [0.8, 0, 15.2, 0.5], "texture": "#main"}
+			}
+		}
+	]
+}
